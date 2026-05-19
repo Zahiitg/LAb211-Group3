@@ -15,13 +15,14 @@ public class DataGenerator {
     private static final String DATA_DIR = "data/";
     private static final DecimalFormat DF = new DecimalFormat("#.##");
 
-    // Cấu hình số lượng bản ghi
+    // Cau hinh so luong ban ghi
     private static final int PRODUCT_COUNT = 5000;
     private static final int CUSTOMER_COUNT = 2000;
     private static final int FLASH_ITEM_COUNT = 500;
     private static final int ORDER_COUNT = 2500;
 
     public static void main(String[] args) throws IOException {
+        System.out.println("🚀 Started generating data... Please wait.");
         new File(DATA_DIR).mkdirs();
 
         // 1. Sinh products.csv
@@ -42,23 +43,23 @@ public class DataGenerator {
                 "id,name,startTime,endTime",
                 FlashSaleEvent::toCsvLine);
 
-        // 4. Sinh flash_items.csv (có cập nhật soldQty sau khi tạo order)
+        // 4. Sinh flash_items.csv (co cap nhat soldQty sau khi tao order)
         List<FlashSaleItem> flashItems = generateFlashItems(FLASH_ITEM_COUNT, products, events);
-        // Ghi tạm flash_items.csv (soldQty = 0) – sẽ ghi lại sau khi cập nhật
+        // Ghi tam flash_items.csv (soldQty = 0) ? se ghi lai sau khi cap nhat
         writeCsv(DATA_DIR + "flash_items_temp.csv", flashItems,
                 "id,productId,eventId,limitedQty,soldQty,version",
                 FlashSaleItem::toCsvLine);
 
-        // 5. Sinh orders.csv và order_details.csv, đồng thời cập nhật soldQty thực tế
+        // 5. Sinh orders.csv va order_details.csv, dong thoi cap nhat soldQty thuc te
         List<Order> orders = new ArrayList<>();
         List<OrderDetail> orderDetails = new ArrayList<>();
         generateOrdersAndDetails(ORDER_COUNT, customers, flashItems, events, orders, orderDetails);
 
-        // Ghi lại flash_items.csv với soldQty đã được cập nhật
+        // Ghi lai flash_items.csv voi soldQty da duoc cap nhat
         writeCsv(DATA_DIR + "flash_items.csv", flashItems,
                 "id,productId,eventId,limitedQty,soldQty,version",
                 FlashSaleItem::toCsvLine);
-        // Xóa file tạm
+        // Xoa file tam
         new File(DATA_DIR + "flash_items_temp.csv").delete();
 
         writeCsv(DATA_DIR + "orders.csv", orders,
@@ -68,13 +69,13 @@ public class DataGenerator {
                 "id,orderId,flashSaleItemId,quantity",
                 OrderDetail::toCsvLine);
 
-        // 6. Tạo transactions.csv rỗng (chỉ có header)
+        // 6. Tao transactions.csv rong (chi co header)
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "transactions.csv"))) {
             bw.write("orderId,lockMechanism,retryCount,processingTimeMs,success,timestamp");
             bw.newLine();
         }
 
-        System.out.println("✅ Data generation completed!");
+        System.out.println("? Data generation completed!");
         System.out.println("Products: " + products.size());
         System.out.println("Customers: " + customers.size());
         System.out.println("FlashItems: " + flashItems.size());
@@ -91,7 +92,7 @@ public class DataGenerator {
             p.setName("Product_" + i);
             p.setCategory(cats[random.nextInt(cats.length)]);
             double price = 10 + random.nextDouble() * 990;
-            p.setPrice(Double.parseDouble(DF.format(price))); // làm tròn 2 chữ số
+            p.setPrice(Math.round(price * 100.0) / 100.0); // lam tron 2 chu so, an toan hon DecimalFormat
             p.setStock(random.nextInt(1000));
             list.add(p);
         }
@@ -119,8 +120,8 @@ public class DataGenerator {
             FlashSaleEvent e = new FlashSaleEvent();
             e.setId("E" + i);
             e.setName("Flash Sale " + i);
-            // Event 1: bắt đầu từ hôm qua, kéo dài 2 giờ
-            // Event 2: bắt đầu từ hôm nay, kéo dài 2 giờ
+            // Event 1: bat dau tu hom qua, keo dai 2 gio
+            // Event 2: bat dau tu hom nay, keo dai 2 gio
             LocalDateTime start = now.minusDays(2 - i).plusHours(i - 1);
             e.setStartTime(start);
             e.setEndTime(start.plusHours(2));
@@ -148,22 +149,22 @@ public class DataGenerator {
                                                   List<FlashSaleItem> flashItems,
                                                   List<FlashSaleEvent> events,
                                                   List<Order> orders, List<OrderDetail> details) {
-        // Nhóm flash items theo eventId để dễ lấy item còn slot
+        // Nhom flash items theo eventId de de lay item con slot
         Map<String, List<FlashSaleItem>> itemsByEvent = new HashMap<>();
         for (FlashSaleItem item : flashItems) {
             itemsByEvent.computeIfAbsent(item.getEventId(), k -> new ArrayList<>()).add(item);
         }
 
         AtomicInteger detailIdCounter = new AtomicInteger(1);
-        int maxAttempts = 100; // tránh loop vô hạn nếu không còn slot
+        int maxAttempts = 100; // tranh loop vo han neu khong con slot
 
         for (int i = 1; i <= orderCount; i++) {
             String orderId = "O" + String.format("%05d", i);
             Customer cust = customers.get(random.nextInt(customers.size()));
 
-            // Chọn ngẫu nhiên một event (để đơn hàng nằm trong khoảng thời gian đó)
+            // Chon ngau nhien mot event (de don hang nam trong khoang thoi gian do)
             FlashSaleEvent event = events.get(random.nextInt(events.size()));
-            // Sinh orderTime trong khoảng [start, end] của event
+            // Sinh orderTime trong khoang [start, end] cua event
             LocalDateTime orderTime = randomTimeBetween(event.getStartTime(), event.getEndTime());
 
             Order order = new Order();
@@ -173,9 +174,9 @@ public class DataGenerator {
             order.setStatus(OrderStatus.PENDING);
             orders.add(order);
 
-            int itemsInOrder = 1 + random.nextInt(2); // 1 hoặc 2 sản phẩm flash
+            int itemsInOrder = 1 + random.nextInt(2); // 1 hoac 2 san pham flash
             for (int j = 0; j < itemsInOrder; j++) {
-                // Tìm flash item của cùng event còn đủ slot
+                // Tim flash item cua cung event con du slot
                 FlashSaleItem selected = null;
                 int attempts = 0;
                 List<FlashSaleItem> candidates = itemsByEvent.get(event.getId());
@@ -183,12 +184,12 @@ public class DataGenerator {
 
                 while (attempts < maxAttempts && selected == null) {
                     FlashSaleItem candidate = candidates.get(random.nextInt(candidates.size()));
-                    int qty = 1 + random.nextInt(2); // 1 hoặc 2
+                    int qty = 1 + random.nextInt(2); // 1 hoac 2
                     synchronized (candidate) {
                         if (candidate.getSoldQty() + qty <= candidate.getLimitedQty()) {
                             candidate.setSoldQty(candidate.getSoldQty() + qty);
                             selected = candidate;
-                            // Tạo OrderDetail
+                            // Tao OrderDetail
                             OrderDetail od = new OrderDetail();
                             od.setId("OD" + String.format("%06d", detailIdCounter.getAndIncrement()));
                             od.setOrderId(orderId);
@@ -199,7 +200,7 @@ public class DataGenerator {
                     }
                     attempts++;
                 }
-                // Nếu không tìm được slot, bỏ qua mặt hàng này (order vẫn có thể chỉ có 1 item)
+                // Neu khong tim duoc slot, bo qua mat hang nay (order van co the chi co 1 item)
             }
         }
     }
@@ -228,3 +229,4 @@ public class DataGenerator {
         String toCsvLine(T item);
     }
 }
+
