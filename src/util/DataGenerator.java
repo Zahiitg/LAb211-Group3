@@ -1,54 +1,97 @@
 package util;
 
 import model.*;
+import model.enums.CustTier;
+import model.enums.OrderStatus;
 import java.io.*;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.text.DecimalFormat;
 
 public class DataGenerator {
     private static final Random random = new Random();
-    private static final DateTimeFormatter DTF = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final String DATA_DIR = "data/";
+    private static final DecimalFormat DF = new DecimalFormat("#.##");
+
+    // Cấu hình số lượng bản ghi
+    private static final int PRODUCT_COUNT = 5000;
+    private static final int CUSTOMER_COUNT = 2000;
+    private static final int FLASH_ITEM_COUNT = 500;
+    private static final int ORDER_COUNT = 2500;
 
     public static void main(String[] args) throws IOException {
-        String dataDir = "data/";
-        new File(dataDir).mkdirs();
+        new File(DATA_DIR).mkdirs();
 
-        // 1. Sinh products.csv (≥ 5000 dòng)
-        List<Product> products = generateProducts(5000);
-        writeCsv(dataDir + "products.csv", products, Product::toCsvLine);
+        // 1. Sinh products.csv
+        List<Product> products = generateProducts(PRODUCT_COUNT);
+        writeCsv(DATA_DIR + "products.csv", products,
+                "id,name,category,price,stock",
+                Product::toCsvLine);
 
-        // 2. Sinh customers.csv (≥ 2000 dòng)
-        List<Customer> customers = generateCustomers(2000);
-        writeCsv(dataDir + "customers.csv", customers, Customer::toCsvLine);
+        // 2. Sinh customers.csv
+        List<Customer> customers = generateCustomers(CUSTOMER_COUNT);
+        writeCsv(DATA_DIR + "customers.csv", customers,
+                "id,name,email,tier",
+                Customer::toCsvLine);
 
         // 3. Sinh flash_events.csv (2 events)
         List<FlashSaleEvent> events = generateEvents(2);
-        writeCsv(dataDir + "flash_events.csv", events, FlashSaleEvent::toCsvLine);
+        writeCsv(DATA_DIR + "flash_events.csv", events,
+                "id,name,startTime,endTime",
+                FlashSaleEvent::toCsvLine);
 
-        // 4. Sinh flash_items.csv (≥ 500 dòng, mỗi dòng là một sản phẩm tham gia event)
-        List<FlashSaleItem> flashItems = generateFlashItems(500, products, events);
-        writeCsv(dataDir + "flash_items.csv", flashItems, FlashSaleItem::toCsvLine);
+        // 4. Sinh flash_items.csv (có cập nhật soldQty sau khi tạo order)
+        List<FlashSaleItem> flashItems = generateFlashItems(FLASH_ITEM_COUNT, products, events);
+        // Ghi tạm flash_items.csv (soldQty = 0) – sẽ ghi lại sau khi cập nhật
+        writeCsv(DATA_DIR + "flash_items_temp.csv", flashItems,
+                "id,productId,eventId,limitedQty,soldQty,version",
+                FlashSaleItem::toCsvLine);
 
-        // 5. Sinh orders.csv (≥ 2500) và order_details.csv (tương ứng)
+        // 5. Sinh orders.csv và order_details.csv, đồng thời cập nhật soldQty thực tế
         List<Order> orders = new ArrayList<>();
         List<OrderDetail> orderDetails = new ArrayList<>();
-        generateOrdersAndDetails(2500, customers, flashItems, orders, orderDetails);
-        writeCsv(dataDir + "orders.csv", orders, Order::toCsvLine);
-        writeCsv(dataDir + "order_details.csv", orderDetails, OrderDetail::toCsvLine);
+        generateOrdersAndDetails(ORDER_COUNT, customers, flashItems, events, orders, orderDetails);
 
-        System.out.println("✅ Data generated successfully. Total lines: " +
-                (products.size() + customers.size() + events.size() + flashItems.size() + orders.size() + orderDetails.size()));
+        // Ghi lại flash_items.csv với soldQty đã được cập nhật
+        writeCsv(DATA_DIR + "flash_items.csv", flashItems,
+                "id,productId,eventId,limitedQty,soldQty,version",
+                FlashSaleItem::toCsvLine);
+        // Xóa file tạm
+        new File(DATA_DIR + "flash_items_temp.csv").delete();
+
+        writeCsv(DATA_DIR + "orders.csv", orders,
+                "id,customerId,orderTime,status",
+                Order::toCsvLine);
+        writeCsv(DATA_DIR + "order_details.csv", orderDetails,
+                "id,orderId,flashSaleItemId,quantity",
+                OrderDetail::toCsvLine);
+
+        // 6. Tạo transactions.csv rỗng (chỉ có header)
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "transactions.csv"))) {
+            bw.write("orderId,lockMechanism,retryCount,processingTimeMs,success,timestamp");
+            bw.newLine();
+        }
+
+        System.out.println("✅ Data generation completed!");
+        System.out.println("Products: " + products.size());
+        System.out.println("Customers: " + customers.size());
+        System.out.println("FlashItems: " + flashItems.size());
+        System.out.println("Orders: " + orders.size());
+        System.out.println("OrderDetails: " + orderDetails.size());
     }
 
     private static List<Product> generateProducts(int count) {
         List<Product> list = new ArrayList<>();
+        String[] cats = {"Electronics", "Fashion", "Home", "Books", "Toys"};
         for (int i = 1; i <= count; i++) {
             Product p = new Product();
-            p.setId("P" + String.format("%04d", i));
+            p.setId("P" + String.format("%05d", i));
             p.setName("Product_" + i);
-            p.setCategory(randomCategory());
-            p.setPrice(10 + random.nextDouble() * 990);
+            p.setCategory(cats[random.nextInt(cats.length)]);
+            double price = 10 + random.nextDouble() * 990;
+            p.setPrice(Double.parseDouble(DF.format(price))); // làm tròn 2 chữ số
             p.setStock(random.nextInt(1000));
             list.add(p);
         }
@@ -59,10 +102,11 @@ public class DataGenerator {
         List<Customer> list = new ArrayList<>();
         for (int i = 1; i <= count; i++) {
             Customer c = new Customer();
-            c.setId("C" + String.format("%04d", i));
+            c.setId("C" + String.format("%05d", i));
             c.setName("Customer_" + i);
             c.setEmail("user" + i + "@example.com");
-            c.setTier(CustTier.values()[random.nextInt(3)]);
+            CustTier tier = CustTier.values()[random.nextInt(3)];
+            c.setTier(tier);
             list.add(c);
         }
         return list;
@@ -70,13 +114,16 @@ public class DataGenerator {
 
     private static List<FlashSaleEvent> generateEvents(int count) {
         List<FlashSaleEvent> list = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
         for (int i = 1; i <= count; i++) {
             FlashSaleEvent e = new FlashSaleEvent();
             e.setId("E" + i);
             e.setName("Flash Sale " + i);
-            e.setStartTime(now.plusDays(i-1));
-            e.setEndTime(now.plusDays(i-1).plusHours(2));
+            // Event 1: bắt đầu từ hôm qua, kéo dài 2 giờ
+            // Event 2: bắt đầu từ hôm nay, kéo dài 2 giờ
+            LocalDateTime start = now.minusDays(2 - i).plusHours(i - 1);
+            e.setStartTime(start);
+            e.setEndTime(start.plusHours(2));
             list.add(e);
         }
         return list;
@@ -85,52 +132,91 @@ public class DataGenerator {
     private static List<FlashSaleItem> generateFlashItems(int count, List<Product> products, List<FlashSaleEvent> events) {
         List<FlashSaleItem> list = new ArrayList<>();
         for (int i = 1; i <= count; i++) {
-            FlashSaleItem item = new FlashSaleItem();
-            item.setId("FI" + String.format("%04d", i));
-            item.setProductId(products.get(random.nextInt(products.size())).getId());
-            item.setEventId(events.get(random.nextInt(events.size())).getId());
-            item.setLimitedQty(10 + random.nextInt(91)); // 10..100
-            item.setSoldQty(0);
-            item.setVersion(1);
-            list.add(item);
+            FlashSaleItem fi = new FlashSaleItem();
+            fi.setId("FI" + String.format("%05d", i));
+            fi.setProductId(products.get(random.nextInt(products.size())).getId());
+            fi.setEventId(events.get(random.nextInt(events.size())).getId());
+            fi.setLimitedQty(10 + random.nextInt(91)); // 10..100
+            fi.setSoldQty(0);
+            fi.setVersion(1);
+            list.add(fi);
         }
         return list;
     }
 
     private static void generateOrdersAndDetails(int orderCount, List<Customer> customers,
-                                                 List<FlashSaleItem> flashItems,
-                                                 List<Order> orders, List<OrderDetail> details) {
+                                                  List<FlashSaleItem> flashItems,
+                                                  List<FlashSaleEvent> events,
+                                                  List<Order> orders, List<OrderDetail> details) {
+        // Nhóm flash items theo eventId để dễ lấy item còn slot
+        Map<String, List<FlashSaleItem>> itemsByEvent = new HashMap<>();
+        for (FlashSaleItem item : flashItems) {
+            itemsByEvent.computeIfAbsent(item.getEventId(), k -> new ArrayList<>()).add(item);
+        }
+
+        AtomicInteger detailIdCounter = new AtomicInteger(1);
+        int maxAttempts = 100; // tránh loop vô hạn nếu không còn slot
+
         for (int i = 1; i <= orderCount; i++) {
             String orderId = "O" + String.format("%05d", i);
             Customer cust = customers.get(random.nextInt(customers.size()));
+
+            // Chọn ngẫu nhiên một event (để đơn hàng nằm trong khoảng thời gian đó)
+            FlashSaleEvent event = events.get(random.nextInt(events.size()));
+            // Sinh orderTime trong khoảng [start, end] của event
+            LocalDateTime orderTime = randomTimeBetween(event.getStartTime(), event.getEndTime());
+
             Order order = new Order();
             order.setId(orderId);
             order.setCustomerId(cust.getId());
-            order.setOrderTime(LocalDateTime.now().minusMinutes(random.nextInt(10080)));
-            order.setStatus(OrderStatus.SUCCESS); // mặc định, sau này simulator sẽ ghi thực tế
+            order.setOrderTime(orderTime);
+            order.setStatus(OrderStatus.PENDING);
             orders.add(order);
 
-            // Mỗi order có 1-2 sản phẩm flash
-            int itemsInOrder = 1 + random.nextInt(2);
+            int itemsInOrder = 1 + random.nextInt(2); // 1 hoặc 2 sản phẩm flash
             for (int j = 0; j < itemsInOrder; j++) {
-                FlashSaleItem fi = flashItems.get(random.nextInt(flashItems.size()));
-                OrderDetail od = new OrderDetail();
-                od.setId("OD" + String.format("%06d", details.size() + 1));
-                od.setOrderId(orderId);
-                od.setFlashSaleItemId(fi.getId());
-                od.setQuantity(1 + random.nextInt(2)); // max 2
-                details.add(od);
+                // Tìm flash item của cùng event còn đủ slot
+                FlashSaleItem selected = null;
+                int attempts = 0;
+                List<FlashSaleItem> candidates = itemsByEvent.get(event.getId());
+                if (candidates == null || candidates.isEmpty()) continue;
+
+                while (attempts < maxAttempts && selected == null) {
+                    FlashSaleItem candidate = candidates.get(random.nextInt(candidates.size()));
+                    int qty = 1 + random.nextInt(2); // 1 hoặc 2
+                    synchronized (candidate) {
+                        if (candidate.getSoldQty() + qty <= candidate.getLimitedQty()) {
+                            candidate.setSoldQty(candidate.getSoldQty() + qty);
+                            selected = candidate;
+                            // Tạo OrderDetail
+                            OrderDetail od = new OrderDetail();
+                            od.setId("OD" + String.format("%06d", detailIdCounter.getAndIncrement()));
+                            od.setOrderId(orderId);
+                            od.setFlashSaleItemId(selected.getId());
+                            od.setQuantity(qty);
+                            details.add(od);
+                        }
+                    }
+                    attempts++;
+                }
+                // Nếu không tìm được slot, bỏ qua mặt hàng này (order vẫn có thể chỉ có 1 item)
             }
         }
     }
 
-    private static String randomCategory() {
-        String[] cats = {"Electronics", "Fashion", "Home", "Books", "Toys"};
-        return cats[random.nextInt(cats.length)];
+    private static LocalDateTime randomTimeBetween(LocalDateTime start, LocalDateTime end) {
+        long secondsBetween = ChronoUnit.SECONDS.between(start, end);
+        if (secondsBetween <= 0) return start;
+        long randomSeconds = random.nextInt((int) secondsBetween + 1);
+        return start.plusSeconds(randomSeconds);
     }
 
-    private static <T> void writeCsv(String path, List<T> data, CsvWriter<T> writer) throws IOException {
+    private static <T> void writeCsv(String path, List<T> data, String header, CsvWriter<T> writer) throws IOException {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(path))) {
+            if (header != null) {
+                bw.write(header);
+                bw.newLine();
+            }
             for (T item : data) {
                 bw.write(writer.toCsvLine(item));
                 bw.newLine();
@@ -138,5 +224,7 @@ public class DataGenerator {
         }
     }
 
-    interface CsvWriter<T> { String toCsvLine(T item); }
+    interface CsvWriter<T> {
+        String toCsvLine(T item);
+    }
 }
