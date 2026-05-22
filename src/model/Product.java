@@ -1,5 +1,7 @@
 package model;
 
+import util.CsvUtil;
+
 public class Product extends BaseEntity {
     private String name;
     private String category;
@@ -30,8 +32,8 @@ public class Product extends BaseEntity {
     public String toCsvLine() {
         return String.join(",",
                 id,
-                escapeCsv(name),
-                escapeCsv(category),
+                CsvUtil.escapeCsv(name),
+                CsvUtil.escapeCsv(category),
                 String.valueOf(price),
                 String.valueOf(stock)
         );
@@ -39,29 +41,12 @@ public class Product extends BaseEntity {
 
     @Override
     public void fromCsvLine(String line) {
-        String[] parts = line.split(",", -1);
+        String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 5) throw new IllegalArgumentException("Invalid Product CSV line");
         this.id = parts[0].trim();
-        this.name = unescapeCsv(parts[1].trim());
-        this.category = unescapeCsv(parts[2].trim());
+        this.name = CsvUtil.unescapeCsv(parts[1]).trim();
+        this.category = CsvUtil.unescapeCsv(parts[2]).trim();
         this.price = Double.parseDouble(parts[3].trim());
         this.stock = Integer.parseInt(parts[4].trim());
-    }
-
-    private String escapeCsv(String s) {
-        if (s == null) return "";
-        if (s.contains(",") || s.contains("\"")) {
-            return "\"" + s.replace("\"", "\"\"") + "\"";
-        }
-        return s;
-    }
-
-    private String unescapeCsv(String s) {
-        if (s == null || s.isEmpty()) return "";
-        if (s.startsWith("\"") && s.endsWith("\"")) {
-            s = s.substring(1, s.length() - 1);
-            s = s.replace("\"\"", "\"");
-        }
-        return s;
     }
 }
