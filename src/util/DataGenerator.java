@@ -71,7 +71,7 @@ public class DataGenerator {
 
         // 6. Tao transactions.csv rong (chi co header)
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "transactions.csv"))) {
-            bw.write("orderId,lockMechanism,retryCount,processingTimeMs,success,timestamp");
+            bw.write("id,orderId,lockMechanism,retryCount,processingTimeMs,success");
             bw.newLine();
         }
 
@@ -187,7 +187,7 @@ public class DataGenerator {
                     int qty = 1 + random.nextInt(2); // 1 hoac 2
                     synchronized (candidate) {
                         if (candidate.getSoldQty() + qty <= candidate.getLimitedQty()) {
-                            candidate.setSoldQty(candidate.getSoldQty() + qty);
+                            candidate.increaseSold(qty);
                             selected = candidate;
                             // Tao OrderDetail
                             OrderDetail od = new OrderDetail();
