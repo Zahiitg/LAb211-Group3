@@ -1,6 +1,7 @@
 package model;
 
 import model.enums.LockMechanism;
+import util.CsvUtil;
 
 public class OrderTransaction extends BaseEntity {
     private String orderId;
@@ -45,7 +46,7 @@ public class OrderTransaction extends BaseEntity {
 
     @Override
     public void fromCsvLine(String line) {
-        String[] parts = line.split(",", -1);
+        String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 6) throw new IllegalArgumentException("Invalid OrderTransaction CSV line");
         this.id = parts[0].trim();
         this.orderId = parts[1].trim();
