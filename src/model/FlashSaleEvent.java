@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import model.enums.SaleStatus;
+import util.CsvUtil;
 
 public class FlashSaleEvent extends BaseEntity {
     private String name;
@@ -61,38 +62,19 @@ public class FlashSaleEvent extends BaseEntity {
     public String toCsvLine() {
         return String.join(",",
                 id,
-                escapeCsv(name),
+                CsvUtil.escapeCsv(name),
                 startTime.format(DTF),
                 endTime.format(DTF));
     }
 
     @Override
     public void fromCsvLine(String line) {
-        String[] parts = line.split(",", -1);
+        String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 4)
             throw new IllegalArgumentException("Invalid FlashSaleEvent CSV line");
         this.id = parts[0].trim();
-        this.name = unescapeCsv(parts[1].trim());
+        this.name = CsvUtil.unescapeCsv(parts[1]).trim();
         this.startTime = LocalDateTime.parse(parts[2].trim(), DTF);
         this.endTime = LocalDateTime.parse(parts[3].trim(), DTF);
-    }
-
-    private String escapeCsv(String s) {
-        if (s == null)
-            return "";
-        if (s.contains(",") || s.contains("\"")) {
-            return "\"" + s.replace("\"", "\"\"") + "\"";
-        }
-        return s;
-    }
-
-    private String unescapeCsv(String s) {
-        if (s == null || s.isEmpty())
-            return "";
-        if (s.startsWith("\"") && s.endsWith("\"")) {
-            s = s.substring(1, s.length() - 1);
-            s = s.replace("\"\"", "\"");
-        }
-        return s;
     }
 }
