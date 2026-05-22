@@ -1,5 +1,7 @@
 package model;
 
+import util.CsvUtil;
+
 public class FlashSaleItem extends BaseEntity {
     private String productId;
     private String eventId;
@@ -54,7 +56,7 @@ public class FlashSaleItem extends BaseEntity {
 
     @Override
     public void fromCsvLine(String line) {
-        String[] parts = line.split(",", -1);
+        String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 6) throw new IllegalArgumentException("Invalid FlashSaleItem CSV line");
         this.id = parts[0].trim();
         this.productId = parts[1].trim();
