@@ -31,24 +31,3 @@ Hệ thống tự động đo lường và xuất báo cáo thống kê về **T
 | 4   | [Điền tên SV 4] | [MSSV 4] | Dev D: View & Integration Lead |
 
 ---
-
-## 🛠 5. HƯỚNG DẪN CÀI ĐẶT & CHẠY THỬ
-
-**Bước 1: Biên dịch mã nguồn (Compile)**
-Mở Terminal/PowerShell tại thư mục `main` (nơi chứa thư mục `src`) và chạy lệnh:
-```bash
-javac -d out (Get-ChildItem -Path src -Recurse -Filter *.java).FullName
-```
-
-**Bước 2: Sinh dữ liệu giả lập (Generate Data)**
-Yêu cầu bắt buộc phải sinh dữ liệu kho hàng (≥ 10,000 dòng CSV) trước khi chạy hệ thống:
-```bash
-java -cp out util.DataGenerator
-```
-
-**Bước 3: Khởi chạy Ứng dụng & Simulator**
-Mở giao diện tương tác Console:
-```bash
-java -cp out view.MainView
-```
-*(Trong giao diện, hãy điều hướng để chạy công cụ Simulator. Hệ thống sẽ bắn hàng trăm request và xuất kết quả đo lường ra màn hình cùng file `transactions.csv`)*
