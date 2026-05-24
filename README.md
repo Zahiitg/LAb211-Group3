@@ -25,7 +25,7 @@ Hệ thống tự động đo lường và xuất báo cáo thống kê về **T
 ## 👨‍💻 4. THÀNH VIÊN NHÓM (GROUP 3)
 | STT | Họ và Tên | MSSV | Vai trò |
 |-----|-----------|------|---------|
-| 1   | [Truong Gia Huy] | [QE190139] | Dev A: Data & Model Lead |
+| 1   | Truong Gia Huy | QE190139 | Dev A: Data & Model Lead |
 | 2   | [Điền tên SV 2] | [MSSV 2] | Dev B: Repository & Lock Lead |
 | 3   | [Điền tên SV 3] | [MSSV 3] | Dev C: Controller & Simulator Lead |
 | 4   | [Điền tên SV 4] | [MSSV 4] | Dev D: View & Integration Lead |
