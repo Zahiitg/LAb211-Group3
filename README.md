@@ -27,7 +27,7 @@ Hệ thống tự động đo lường và xuất báo cáo thống kê về **T
 |-----|-----------|------|---------|
 | 1   | Truong Gia Huy | QE190139 | Dev A: Data & Model Lead |
 | 2   | Lê Hoàng Cầu | QE200098 | Dev B: Repository & Lock Lead |
-| 3   | [Điền tên SV 3] | [MSSV 3] | Dev C: Controller & Simulator Lead |
+| 3   | Mai Hoàng  Đăng | [MSSV 3] | Dev C: Controller & Simulator Lead |
 | 4   | [Điền tên SV 4] | [MSSV 4] | Dev D: View & Integration Lead |
 
 ---
