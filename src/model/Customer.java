@@ -11,7 +11,7 @@ public class Customer extends BaseEntity {
     public Customer() {}
 
     public Customer(String id, String name, String email, CustTier tier) {
-        this.id = id;
+        setId(id);
         this.name = name;
         this.email = email;
         this.tier = tier;
@@ -27,7 +27,7 @@ public class Customer extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",",
-                id,
+                getId(),
                 CsvUtil.escapeCsv(name),
                 email,
                 tier.name()
@@ -38,7 +38,7 @@ public class Customer extends BaseEntity {
     public void fromCsvLine(String line) {
         String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 4) throw new IllegalArgumentException("Invalid Customer CSV line");
-        this.id = parts[0].trim();
+        setId(parts[0].trim());
         this.name = CsvUtil.unescapeCsv(parts[1]).trim();
         this.email = parts[2].trim();
         this.tier = CustTier.valueOf(parts[3].trim());

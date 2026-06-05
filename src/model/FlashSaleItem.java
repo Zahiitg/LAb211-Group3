@@ -14,7 +14,7 @@ public class FlashSaleItem extends BaseEntity {
     }
 
     public FlashSaleItem(String id, String productId, String eventId, int limitedQty, int soldQty, int version) {
-        this.id = id;
+        setId(id);
         this.productId = productId;
         this.eventId = eventId;
         this.limitedQty = limitedQty;
@@ -45,7 +45,7 @@ public class FlashSaleItem extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",",
-                id,
+                getId(),
                 productId,
                 eventId,
                 String.valueOf(limitedQty),
@@ -58,7 +58,7 @@ public class FlashSaleItem extends BaseEntity {
     public void fromCsvLine(String line) {
         String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 6) throw new IllegalArgumentException("Invalid FlashSaleItem CSV line");
-        this.id = parts[0].trim();
+        setId(parts[0].trim());
         this.productId = parts[1].trim();
         this.eventId = parts[2].trim();
         this.limitedQty = Integer.parseInt(parts[3].trim());

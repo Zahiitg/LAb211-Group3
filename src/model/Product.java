@@ -11,7 +11,7 @@ public class Product extends BaseEntity {
     public Product() {}
 
     public Product(String id, String name, String category, double price, int stock) {
-        this.id = id;
+        setId(id);
         this.name = name;
         this.category = category;
         this.price = price;
@@ -31,7 +31,7 @@ public class Product extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",",
-                id,
+                getId(),
                 CsvUtil.escapeCsv(name),
                 CsvUtil.escapeCsv(category),
                 String.valueOf(price),
@@ -43,7 +43,7 @@ public class Product extends BaseEntity {
     public void fromCsvLine(String line) {
         String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 5) throw new IllegalArgumentException("Invalid Product CSV line");
-        this.id = parts[0].trim();
+        setId(parts[0].trim());
         this.name = CsvUtil.unescapeCsv(parts[1]).trim();
         this.category = CsvUtil.unescapeCsv(parts[2]).trim();
         this.price = Double.parseDouble(parts[3].trim());

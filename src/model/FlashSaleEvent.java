@@ -28,7 +28,7 @@ public class FlashSaleEvent extends BaseEntity {
     }
 
     public FlashSaleEvent(String id, String name, LocalDateTime startTime, LocalDateTime endTime) {
-        this.id = id;
+        setId(id);
         this.name = name;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -61,7 +61,7 @@ public class FlashSaleEvent extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",",
-                id,
+                getId(),
                 CsvUtil.escapeCsv(name),
                 startTime.format(DTF),
                 endTime.format(DTF));
@@ -72,7 +72,7 @@ public class FlashSaleEvent extends BaseEntity {
         String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 4)
             throw new IllegalArgumentException("Invalid FlashSaleEvent CSV line");
-        this.id = parts[0].trim();
+        setId(parts[0].trim());
         this.name = CsvUtil.unescapeCsv(parts[1]).trim();
         this.startTime = LocalDateTime.parse(parts[2].trim(), DTF);
         this.endTime = LocalDateTime.parse(parts[3].trim(), DTF);

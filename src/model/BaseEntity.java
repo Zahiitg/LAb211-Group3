@@ -1,7 +1,7 @@
 package model;
 
 public abstract class BaseEntity {
-    protected String id;
+    private String id;
 
     public String getId() {
         return id;

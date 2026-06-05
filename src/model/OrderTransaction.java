@@ -13,7 +13,7 @@ public class OrderTransaction extends BaseEntity {
     public OrderTransaction() {}
 
     public OrderTransaction(String id, String orderId, LockMechanism lockMechanism, int retryCount, long processingTimeMs, boolean success) {
-        this.id = id;
+        setId(id);
         this.orderId = orderId;
         this.lockMechanism = lockMechanism;
         this.retryCount = retryCount;
@@ -35,7 +35,7 @@ public class OrderTransaction extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",",
-                id,
+                getId(),
                 orderId,
                 lockMechanism.name(),
                 String.valueOf(retryCount),
@@ -48,7 +48,7 @@ public class OrderTransaction extends BaseEntity {
     public void fromCsvLine(String line) {
         String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 6) throw new IllegalArgumentException("Invalid OrderTransaction CSV line");
-        this.id = parts[0].trim();
+        setId(parts[0].trim());
         this.orderId = parts[1].trim();
         this.lockMechanism = LockMechanism.valueOf(parts[2].trim());
         this.retryCount = Integer.parseInt(parts[3].trim());

@@ -15,7 +15,7 @@ public class Order extends BaseEntity {
     public Order() {}
 
     public Order(String id, String customerId, LocalDateTime orderTime, OrderStatus status) {
-        this.id = id;
+        setId(id);
         this.customerId = customerId;
         this.orderTime = orderTime;
         this.status = status;
@@ -31,7 +31,7 @@ public class Order extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",",
-                id,
+                getId(),
                 customerId,
                 orderTime.format(DTF),
                 status.name()
@@ -42,7 +42,7 @@ public class Order extends BaseEntity {
     public void fromCsvLine(String line) {
         String[] parts = CsvUtil.splitCsvLine(line);
         if (parts.length < 4) throw new IllegalArgumentException("Invalid Order CSV line");
-        this.id = parts[0].trim();
+        setId(parts[0].trim());
         this.customerId = parts[1].trim();
         this.orderTime = LocalDateTime.parse(parts[2].trim(), DTF);
         this.status = OrderStatus.valueOf(parts[3].trim());
