@@ -27,7 +27,8 @@ public class CsvParseTest {
     }
 
     private static void testProduct() {
-        Product p1 = new Product("P001", "Laptop Dell, Gaming", "Electronics", 1500.50, 10);
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        Product p1 = new Product("P001", now, now, "Laptop Dell, Gaming", "Electronics", 1500.50, 10);
         String csv = p1.toCsvLine();
         Product p2 = new Product();
         p2.fromCsvLine(csv);
@@ -40,32 +41,34 @@ public class CsvParseTest {
     }
 
     private static void testCustomer() {
-        Customer c1 = new Customer("C001", "Nguyen Van A", "a@gmail.com", CustTier.VIP);
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        Customer c1 = new Customer("C001", now, now, "Nguyen Van A", "0901234567", "a@gmail.com", CustTier.VIP, 150000.0, true);
         String csv = c1.toCsvLine();
         Customer c2 = new Customer();
         c2.fromCsvLine(csv);
         
         assertEquals(c1.getId(), c2.getId(), "Customer ID mismatch");
-        assertEquals(c1.getName(), c2.getName(), "Customer Name mismatch");
+        assertEquals(c1.getFullName(), c2.getFullName(), "Customer Name mismatch");
         assertEquals(c1.getEmail(), c2.getEmail(), "Customer Email mismatch");
         assertEquals(c1.getTier(), c2.getTier(), "Customer Tier mismatch");
     }
 
     private static void testFlashSaleEvent() {
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-        FlashSaleEvent e1 = new FlashSaleEvent("E001", "Black Friday", now, now.plusDays(1));
+        FlashSaleEvent e1 = new FlashSaleEvent("E001", now, now, "Black Friday", now, now.plusDays(1), SaleStatus.UPCOMING);
         String csv = e1.toCsvLine();
         FlashSaleEvent e2 = new FlashSaleEvent();
         e2.fromCsvLine(csv);
         
         assertEquals(e1.getId(), e2.getId(), "Event ID mismatch");
-        assertEquals(e1.getName(), e2.getName(), "Event Name mismatch");
+        assertEquals(e1.getEventName(), e2.getEventName(), "Event Name mismatch");
         assertEquals(e1.getStartTime().toString(), e2.getStartTime().toString(), "Event StartTime mismatch");
         assertEquals(e1.getEndTime().toString(), e2.getEndTime().toString(), "Event EndTime mismatch");
     }
 
     private static void testFlashSaleItem() {
-        FlashSaleItem i1 = new FlashSaleItem("FI001", "P001", "E001", 100, 5, 2);
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        FlashSaleItem i1 = new FlashSaleItem("FI001", now, now, "E001", "P001", 1000.0, 100, 5, 20, 2, SaleStatus.ONGOING);
         String csv = i1.toCsvLine();
         FlashSaleItem i2 = new FlashSaleItem();
         i2.fromCsvLine(csv);
@@ -79,19 +82,20 @@ public class CsvParseTest {
     }
 
     private static void testOrder() {
-        Order o1 = new Order("O001", "C001", LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), OrderStatus.SUCCESS);
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        Order o1 = new Order("O001", now, now, "C001", "E001", 500.0, OrderStatus.SUCCESS, LockMechanism.OPTIMISTIC);
         String csv = o1.toCsvLine();
         Order o2 = new Order();
         o2.fromCsvLine(csv);
         
         assertEquals(o1.getId(), o2.getId(), "Order ID mismatch");
         assertEquals(o1.getCustomerId(), o2.getCustomerId(), "Order CustomerId mismatch");
-        assertEquals(o1.getOrderTime().toString(), o2.getOrderTime().toString(), "Order OrderTime mismatch");
         assertEquals(o1.getStatus(), o2.getStatus(), "Order Status mismatch");
     }
 
     private static void testOrderDetail() {
-        OrderDetail d1 = new OrderDetail("OD001", "O001", "FI001", 2);
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        OrderDetail d1 = new OrderDetail("OD001", now, now, "O001", "FI001", 2, 250.0, 500.0);
         String csv = d1.toCsvLine();
         OrderDetail d2 = new OrderDetail();
         d2.fromCsvLine(csv);
@@ -103,7 +107,8 @@ public class CsvParseTest {
     }
 
     private static void testOrderTransaction() {
-        OrderTransaction t1 = new OrderTransaction("T001", "O001", LockMechanism.OPTIMISTIC, 3, 150L, true);
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        OrderTransaction t1 = new OrderTransaction("T001", now, now, "O001", LockMechanism.OPTIMISTIC, 3, 150L, true);
         String csv = t1.toCsvLine();
         OrderTransaction t2 = new OrderTransaction();
         t2.fromCsvLine(csv);

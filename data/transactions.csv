@@ -1,1 +1,1 @@
-orderId,lockMechanism,retryCount,processingTimeMs,success,timestamp
+id,createdAt,updatedAt,orderId,lockMechanism,retryCount,processingTimeMs,success
