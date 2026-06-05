@@ -1,362 +1,178 @@
 package util;
-
 import model.*;
 import model.enums.*;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DataGenerator {
-    private static final Random random = new Random();
     private static final String DATA_DIR = "data/";
-    private static final DateTimeFormatter DTF = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final Random RANDOM = new Random();
 
-    // Cau hinh so luong ban ghi
-    private static final int PRODUCT_COUNT = 5000;
-    private static final int CUSTOMER_COUNT = 2500;
-    private static final int EVENT_COUNT = 50;
-    private static final int FLASH_ITEM_COUNT = 1000;
-    private static final int ORDER_COUNT = 3000;
+    private static final String[] LAST_NAMES = {"Nguyen", "Tran", "Le", "Pham", "Hoang", "Huynh", "Phan", "Vu", "Vo", "Dang", "Bui", "Do", "Ho", "Ngo", "Duong", "Ly", "Truong"};
+    private static final String[] MIDDLE_NAMES = {"Van", "Thi", "Ngoc", "Gia", "Thanh", "Minh", "Hai", "Tuan", "Duc", "Hoang", "Xuan", "Thu", "Hong", "Mai", "Quynh"};
+    private static final String[] FIRST_NAMES = {"Huy", "An", "Anh", "Binh", "Cuong", "Dung", "Duong", "Dat", "Ha", "Hung", "Khanh", "Khoa", "Kien", "Lam", "Linh", "Long", "Nam", "Nghia", "Nhi", "Nhung", "Phuc", "Phuong", "Quan", "Quang", "Quoc", "Tam", "Thao", "Thang", "Thanh", "Thuy", "Trang", "Trung", "Tu", "Tuan", "Uyen", "Van", "Viet", "Vy", "Yen"};
+    private static final String[] PROD_PREFIXES = {"Garmin Forerunner", "Lenovo ThinkPad X1", "Razer Blade 16", "Adidas Ultraboost", "Samsung Galaxy Tab S9", "Sony A7 IV", "Samsung Galaxy S25", "Apple iPhone 16", "MacBook Pro M3", "Dell XPS 15", "Asus ROG Zephyrus", "Nike Air Max", "Sony WH-1000XM6"};
+    private static final String[] PROD_SUFFIXES = {"2023 Edition", "2024 Edition", "2025 Edition", "2026 Edition", "Pro", "Ultra", "Max", "Plus", "Standard"};
 
-    // Moc thoi gian de sinh createdAt (6-12 thang truoc)
-    private static final LocalDateTime NOW = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    private static final LocalDateTime EARLIEST = NOW.minusMonths(12);
-
-    // ======================== MAIN ========================
-    public static void main(String[] args) throws IOException {
-        System.out.println("🚀 Started generating data... Please wait.");
-        new File(DATA_DIR).mkdirs();
-
-        // 1. Sinh products.csv
-        List<Product> products = generateProducts(PRODUCT_COUNT);
-        writeCsv(DATA_DIR + "products.csv", products,
-                "id,createdAt,updatedAt,name,category,price,stock",
-                Product::toCsvLine);
-
-        // 2. Sinh customers.csv
-        List<Customer> customers = generateCustomers(CUSTOMER_COUNT);
-        writeCsv(DATA_DIR + "customers.csv", customers,
-                "id,createdAt,updatedAt,fullName,phone,email,tier,totalSpent,active",
-                Customer::toCsvLine);
-
-        // 3. Sinh flash_events.csv
-        List<FlashSaleEvent> events = generateEvents(EVENT_COUNT);
-        writeCsv(DATA_DIR + "flash_events.csv", events,
-                "id,createdAt,updatedAt,eventName,startTime,endTime,status",
-                FlashSaleEvent::toCsvLine);
-
-        // 4. Sinh flash_items.csv (soldQty se duoc cap nhat sau khi tao order)
-        List<FlashSaleItem> flashItems = generateFlashItems(FLASH_ITEM_COUNT, products, events);
-
-        // 5. Sinh orders.csv va order_details.csv, dong thoi cap nhat soldQty thuc te
-        List<Order> orders = new ArrayList<>();
-        List<OrderDetail> orderDetails = new ArrayList<>();
-        generateOrdersAndDetails(ORDER_COUNT, customers, flashItems, events, orders, orderDetails);
-
-        // Ghi flash_items.csv voi soldQty da duoc cap nhat
-        writeCsv(DATA_DIR + "flash_items.csv", flashItems,
-                "id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,discountPercent,version,status",
-                FlashSaleItem::toCsvLine);
-
-        writeCsv(DATA_DIR + "orders.csv", orders,
-                "id,createdAt,updatedAt,customerId,eventId,totalAmount,status,lockMechanism",
-                Order::toCsvLine);
-        writeCsv(DATA_DIR + "order_details.csv", orderDetails,
-                "id,createdAt,updatedAt,orderId,flashSaleItemId,quantity,unitPrice,subTotal",
-                OrderDetail::toCsvLine);
-
-        // 6. Tao transactions.csv rong (chi co header)
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "transactions.csv"))) {
-            bw.write("id,createdAt,updatedAt,orderId,lockMechanism,retryCount,processingTimeMs,success");
-            bw.newLine();
-        }
-
-        System.out.println("✅ Data generation completed!");
-        System.out.println("   Products:     " + products.size());
-        System.out.println("   Customers:    " + customers.size());
-        System.out.println("   Events:       " + events.size());
-        System.out.println("   FlashItems:   " + flashItems.size());
-        System.out.println("   Orders:       " + orders.size());
-        System.out.println("   OrderDetails: " + orderDetails.size());
+    private static String generateName() {
+        return LAST_NAMES[RANDOM.nextInt(LAST_NAMES.length)] + " " +
+               MIDDLE_NAMES[RANDOM.nextInt(MIDDLE_NAMES.length)] + " " +
+               FIRST_NAMES[RANDOM.nextInt(FIRST_NAMES.length)];
     }
 
-    // ======================== GENERATORS ========================
+    private static String generateEmail(String name) {
+        String noAccent = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase().replaceAll(" ", "");
+        return noAccent + RANDOM.nextInt(100) + "@gmail.com";
+    }
 
-    private static List<Product> generateProducts(int count) {
-        List<Product> list = new ArrayList<>();
-        String[] cats = {"Electronics", "Fashion", "Home", "Books", "Toys"};
+    public static void main(String[] args) {
+        System.out.println("🚀 Started generating data... Please wait.");
+        try {
+            List<Admin> admins = generateAdmins(10);
+            List<Seller> sellers = generateSellers(50);
+            List<Customer> customers = generateCustomers(2000);
+            List<Product> products = generateProducts(5000, sellers);
+            List<FlashSaleEvent> events = generateEvents(50);
+            List<FlashSaleItem> flashItems = generateFlashItems(1000, products, events);
+            List<Order> orders = generateOrders(2500, customers);
+            List<OrderDetail> details = generateOrderDetails(4000, orders, flashItems);
+            List<OrderTransaction> transactions = generateTransactions(3000, orders);
+
+            saveCsv("admins.csv", "id,name,email,password,status,roleLevel", admins);
+            saveCsv("sellers.csv", "id,name,email,password,status,storeName", sellers);
+            saveCsv("customers.csv", "id,name,email,password,status,tier", customers);
+            saveCsv("products.csv", "id,sellerId,name,category,price,stock", products);
+            saveCsv("flash_events.csv", "id,name,startTime,endTime,status", events);
+            saveCsv("flash_items.csv", "id,productId,eventId,limitedQty,soldQty,version", flashItems);
+            saveCsv("orders.csv", "id,customerId,orderTime,status", orders);
+            saveCsv("order_details.csv", "id,orderId,flashSaleItemId,quantity,priceAtPurchase", details);
+            saveCsv("transactions.csv", "id,orderId,lockMechanism,retryCount,processingTimeMs,success", transactions);
+
+            System.out.println("✅ Data generation completed!");
+            System.out.println("   Admins:       " + admins.size());
+            System.out.println("   Sellers:      " + sellers.size());
+            System.out.println("   Customers:    " + customers.size());
+            System.out.println("   Products:     " + products.size());
+            System.out.println("   Events:       " + events.size());
+            System.out.println("   FlashItems:   " + flashItems.size());
+            System.out.println("   Orders:       " + orders.size());
+            System.out.println("   OrderDetails: " + details.size());
+            System.out.println("   Transactions: " + transactions.size());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static List<Admin> generateAdmins(int count) {
+        List<Admin> list = new ArrayList<>();
         for (int i = 1; i <= count; i++) {
-            Product p = new Product();
-            p.setId("P" + String.format("%05d", i));
-            LocalDateTime created = randomPastTime();
-            p.setCreatedAt(created);
-            p.setUpdatedAt(randomAfter(created));
-            p.setName("Product_" + i);
-            p.setCategory(cats[random.nextInt(cats.length)]);
-            double price = 10 + random.nextDouble() * 990;
-            p.setPrice(Math.round(price * 100.0) / 100.0);
-            p.setStock(random.nextInt(1000));
-            list.add(p);
+            String name = generateName();
+            list.add(new Admin(String.format("A%05d", i), name, generateEmail(name), "pass123", AccountStatus.APPROVED, 1));
+        }
+        return list;
+    }
+
+    private static List<Seller> generateSellers(int count) {
+        List<Seller> list = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            String name = generateName();
+            list.add(new Seller(String.format("S%05d", i), name, generateEmail(name), "pass123", AccountStatus.APPROVED, name + " Store"));
         }
         return list;
     }
 
     private static List<Customer> generateCustomers(int count) {
         List<Customer> list = new ArrayList<>();
-        String[] firstNames = {"Hoang", "Nguyen", "Tran", "Le", "Pham", "Vo", "Dang", "Bui", "Do", "Ngo"};
-        String[] lastNames = {"Bao Vy", "Anh Nam", "Duc Cuong", "Duc Phong", "Duc Yen",
-                              "Minh Hieu", "Thanh Tung", "Quang Huy", "Thi Mai", "Van An"};
+        CustTier[] tiers = CustTier.values();
+        list.add(new Customer("C00001", "Truong Gia Huy", "truonggiahuy@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD));
+        for (int i = 2; i <= count; i++) {
+            String name = generateName();
+            list.add(new Customer(String.format("C%05d", i), name, generateEmail(name), "pass123", RANDOM.nextDouble() > 0.1 ? AccountStatus.APPROVED : AccountStatus.BANNED, tiers[RANDOM.nextInt(tiers.length)]));
+        }
+        return list;
+    }
 
+    private static List<Product> generateProducts(int count, List<Seller> sellers) {
+        List<Product> list = new ArrayList<>();
+        String[] categories = {"Electronics", "Fashion", "Home", "Beauty", "Sports"};
         for (int i = 1; i <= count; i++) {
-            Customer c = new Customer();
-            c.setId("C" + String.format("%05d", i));
-            LocalDateTime created = randomPastTime();
-            c.setCreatedAt(created);
-            c.setUpdatedAt(randomAfter(created));
-
-            String fn = firstNames[random.nextInt(firstNames.length)]
-                    + " " + lastNames[random.nextInt(lastNames.length)];
-            c.setFullName(fn);
-
-            // Sinh so dien thoai 9 chu so (bat dau 9xx)
-            c.setPhone("9" + String.format("%08d", random.nextInt(100000000)));
-
-            c.setEmail(fn.toLowerCase().replace(" ", ".") + i + "@gmail.com");
-
-            CustTier tier = CustTier.values()[random.nextInt(CustTier.values().length)];
-            c.setTier(tier);
-
-            // totalSpent phu thuoc tier
-            double spent;
-            switch (tier) {
-                case VIP:     spent = 50000000 + random.nextDouble() * 50000000; break;
-                case PREMIUM: spent = 10000000 + random.nextDouble() * 40000000; break;
-                default:      spent = random.nextDouble() * 10000000; break;
-            }
-            c.setTotalSpent(Math.round(spent));
-
-            // 85% active
-            c.setActive(random.nextInt(100) < 85);
-
-            list.add(c);
+            String sellerId = sellers.get(RANDOM.nextInt(sellers.size())).getId();
+            double generatedPrice = (RANDOM.nextInt(10000) + 50) * 1000.0; // Từ 50,000 đến 10,049,000 VND
+            String prodName = PROD_PREFIXES[RANDOM.nextInt(PROD_PREFIXES.length)] + " " + PROD_SUFFIXES[RANDOM.nextInt(PROD_SUFFIXES.length)];
+            list.add(new Product(String.format("P%05d", i), sellerId, prodName, categories[RANDOM.nextInt(categories.length)], generatedPrice, RANDOM.nextInt(500) + 10));
         }
         return list;
     }
 
     private static List<FlashSaleEvent> generateEvents(int count) {
         List<FlashSaleEvent> list = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         for (int i = 1; i <= count; i++) {
-            FlashSaleEvent e = new FlashSaleEvent();
-            e.setId("E" + String.format("%03d", i));
-
-            LocalDateTime created = randomPastTime();
-            e.setCreatedAt(created);
-            e.setUpdatedAt(randomAfter(created));
-
-            e.setEventName("Mega Flash Sale " + i);
-
-            // Phan bo thoi gian: qua khu, hien tai, tuong lai
-            LocalDateTime start;
-            if (i <= count * 0.6) {
-                // 60% events da ket thuc (trong qua khu)
-                start = NOW.minusDays(random.nextInt(180) + 1).withHour(11).withMinute(30).withSecond(21);
-            } else if (i <= count * 0.8) {
-                // 20% events sap toi (trong tuong lai)
-                start = NOW.plusDays(random.nextInt(60) + 1).withHour(11).withMinute(30).withSecond(21);
-            } else {
-                // 20% events dang dien ra (hom nay)
-                start = NOW.minusHours(1).withMinute(30).withSecond(21);
-            }
-            e.setStartTime(start);
-            e.setEndTime(start.plusHours(4));
-
-            // Tinh status tu thoi gian
-            SaleStatus status = e.computeStatus();
-            // 5% bi DISABLED ngau nhien
-            if (random.nextInt(100) < 5) {
-                status = SaleStatus.DISABLED;
-            }
-            e.setStatus(status);
-
-            list.add(e);
+            LocalDateTime start = now.minusDays(RANDOM.nextInt(30));
+            LocalDateTime end = start.plusHours(RANDOM.nextInt(48) + 1);
+            SaleStatus status = end.isBefore(now) ? SaleStatus.ENDED : SaleStatus.ONGOING;
+            list.add(new FlashSaleEvent(String.format("E%05d", i), "Event " + i, start, end, status));
         }
         return list;
     }
 
-    private static List<FlashSaleItem> generateFlashItems(int count, List<Product> products,
-                                                           List<FlashSaleEvent> events) {
+    private static List<FlashSaleItem> generateFlashItems(int count, List<Product> products, List<FlashSaleEvent> events) {
         List<FlashSaleItem> list = new ArrayList<>();
         for (int i = 1; i <= count; i++) {
-            FlashSaleItem fi = new FlashSaleItem();
-            fi.setId("FI" + String.format("%05d", i));
-
-            LocalDateTime created = randomPastTime();
-            fi.setCreatedAt(created);
-            fi.setUpdatedAt(randomAfter(created));
-
-            Product product = products.get(random.nextInt(products.size()));
-            FlashSaleEvent event = events.get(random.nextInt(events.size()));
-
-            fi.setEventId(event.getId());
-            fi.setProductId(product.getId());
-
-            // Discount 10-70%
-            int discount = 10 + random.nextInt(61);
-            fi.setDiscountPercent(discount);
-            double flashPrice = product.getPrice() * (100 - discount) / 100.0;
-            fi.setFlashPrice(Math.round(flashPrice));
-
-            fi.setLimitedQty(10 + random.nextInt(91)); // 10..100
-            fi.setSoldQty(0);
-            fi.setVersion(0);
-
-            // Status theo event
-            fi.setStatus(event.getStatus());
-
-            list.add(fi);
+            String prodId = products.get(RANDOM.nextInt(products.size())).getId();
+            String eventId = events.get(RANDOM.nextInt(events.size())).getId();
+            int limit = RANDOM.nextInt(100) + 10;
+            list.add(new FlashSaleItem(String.format("FI%05d", i), prodId, eventId, limit, RANDOM.nextInt(limit), 1));
         }
         return list;
     }
 
-    private static void generateOrdersAndDetails(int orderCount, List<Customer> customers,
-                                                  List<FlashSaleItem> flashItems,
-                                                  List<FlashSaleEvent> events,
-                                                  List<Order> orders, List<OrderDetail> details) {
-        // Nhom flash items theo eventId de de lay item con slot
-        Map<String, List<FlashSaleItem>> itemsByEvent = new HashMap<>();
-        for (FlashSaleItem item : flashItems) {
-            itemsByEvent.computeIfAbsent(item.getEventId(), k -> new ArrayList<>()).add(item);
+    private static List<Order> generateOrders(int count, List<Customer> customers) {
+        List<Order> list = new ArrayList<>();
+        OrderStatus[] statuses = OrderStatus.values();
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        for (int i = 1; i <= count; i++) {
+            String custId = customers.get(RANDOM.nextInt(customers.size())).getId();
+            list.add(new Order(String.format("O%05d", i), custId, now.minusDays(RANDOM.nextInt(30)), statuses[RANDOM.nextInt(statuses.length)]));
         }
+        return list;
+    }
 
-        // Map eventId -> FlashSaleEvent de lay thoi gian
-        Map<String, FlashSaleEvent> eventMap = new HashMap<>();
-        for (FlashSaleEvent ev : events) {
-            eventMap.put(ev.getId(), ev);
+    private static List<OrderDetail> generateOrderDetails(int count, List<Order> orders, List<FlashSaleItem> items) {
+        List<OrderDetail> list = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            String orderId = orders.get(RANDOM.nextInt(orders.size())).getId();
+            String itemId = items.get(RANDOM.nextInt(items.size())).getId();
+            double purchasePrice = (RANDOM.nextInt(5000) + 50) * 1000.0; // Random giá mua VND
+            list.add(new OrderDetail(String.format("OD%05d", i), orderId, itemId, RANDOM.nextInt(5) + 1, purchasePrice));
         }
+        return list;
+    }
 
-        // Map flashSaleItemId -> FlashSaleItem de lay flashPrice
-        Map<String, FlashSaleItem> itemMap = new HashMap<>();
-        for (FlashSaleItem item : flashItems) {
-            itemMap.put(item.getId(), item);
-        }
-
-        AtomicInteger detailIdCounter = new AtomicInteger(1);
+    private static List<OrderTransaction> generateTransactions(int count, List<Order> orders) {
+        List<OrderTransaction> list = new ArrayList<>();
         LockMechanism[] locks = LockMechanism.values();
-        int maxAttempts = 100;
-
-        for (int i = 1; i <= orderCount; i++) {
-            String orderId = "O" + String.format("%06d", i);
-            Customer cust = customers.get(random.nextInt(customers.size()));
-
-            // Chon ngau nhien mot event
-            FlashSaleEvent event = events.get(random.nextInt(events.size()));
-            // Sinh orderTime (createdAt) trong khoang [start, end] cua event
-            LocalDateTime orderTime = randomTimeBetween(event.getStartTime(), event.getEndTime());
-            LocalDateTime updateTime = randomAfter(orderTime);
-
-            // Chon ngau nhien lockMechanism
-            LockMechanism lock = locks[random.nextInt(locks.length)];
-
-            // Tam tao order (totalAmount se tinh sau)
-            Order order = new Order();
-            order.setId(orderId);
-            order.setCreatedAt(orderTime);
-            order.setUpdatedAt(updateTime);
-            order.setCustomerId(cust.getId());
-            order.setEventId(event.getId());
-            order.setStatus(OrderStatus.PENDING);
-            order.setLockMechanism(lock);
-
-            double totalAmount = 0;
-            int itemsInOrder = 1 + random.nextInt(2); // 1 hoac 2 san pham flash
-            boolean hasDetail = false;
-
-            for (int j = 0; j < itemsInOrder; j++) {
-                FlashSaleItem selected = null;
-                int attempts = 0;
-                List<FlashSaleItem> candidates = itemsByEvent.get(event.getId());
-                if (candidates == null || candidates.isEmpty()) continue;
-
-                while (attempts < maxAttempts && selected == null) {
-                    FlashSaleItem candidate = candidates.get(random.nextInt(candidates.size()));
-                    int qty = 1 + random.nextInt(2); // 1 hoac 2
-                    synchronized (candidate) {
-                        if (candidate.getSoldQty() + qty <= candidate.getLimitedQty()) {
-                            candidate.increaseSold(qty);
-                            candidate.setUpdatedAt(orderTime);
-                            selected = candidate;
-
-                            double unitPrice = candidate.getFlashPrice();
-                            double subTotal = qty * unitPrice;
-                            totalAmount += subTotal;
-
-                            OrderDetail od = new OrderDetail();
-                            od.setId("OD" + String.format("%06d", detailIdCounter.getAndIncrement()));
-                            od.setCreatedAt(orderTime);
-                            od.setUpdatedAt(updateTime);
-                            od.setOrderId(orderId);
-                            od.setFlashSaleItemId(selected.getId());
-                            od.setQuantity(qty);
-                            od.setUnitPrice(unitPrice);
-                            od.setSubTotal(subTotal);
-                            details.add(od);
-                            hasDetail = true;
-                        }
-                    }
-                    attempts++;
-                }
-            }
-
-            order.setTotalAmount(totalAmount);
-            if (hasDetail) {
-                order.setStatus(OrderStatus.SUCCESS);
-            }
-            orders.add(order);
+        for (int i = 1; i <= count; i++) {
+            String orderId = orders.get(RANDOM.nextInt(orders.size())).getId();
+            list.add(new OrderTransaction(String.format("T%05d", i), orderId, locks[RANDOM.nextInt(locks.length)], RANDOM.nextInt(3), RANDOM.nextInt(500) + 10, RANDOM.nextBoolean()));
         }
+        return list;
     }
 
-    // ======================== UTILITIES ========================
-
-    /** Sinh thoi gian ngau nhien trong khoang 6-12 thang truoc */
-    private static LocalDateTime randomPastTime() {
-        long totalSeconds = ChronoUnit.SECONDS.between(EARLIEST, NOW.minusMonths(1));
-        long rndSeconds = (long) (random.nextDouble() * totalSeconds);
-        return EARLIEST.plusSeconds(rndSeconds);
-    }
-
-    /** Sinh thoi gian ngau nhien SAU mot moc cho truoc (trong vong 30 ngay) */
-    private static LocalDateTime randomAfter(LocalDateTime after) {
-        long maxOffset = 30L * 24 * 60 * 60; // 30 ngay
-        long offset = (long) (random.nextDouble() * maxOffset);
-        LocalDateTime result = after.plusSeconds(offset);
-        // Dam bao khong vuot qua NOW
-        return result.isAfter(NOW) ? NOW : result;
-    }
-
-    private static LocalDateTime randomTimeBetween(LocalDateTime start, LocalDateTime end) {
-        long secondsBetween = ChronoUnit.SECONDS.between(start, end);
-        if (secondsBetween <= 0) return start;
-        long randomSeconds = (long) (random.nextDouble() * secondsBetween);
-        return start.plusSeconds(randomSeconds);
-    }
-
-    private static <T> void writeCsv(String path, List<T> data, String header, CsvWriter<T> writer) throws IOException {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(path))) {
-            if (header != null) {
-                bw.write(header);
-                bw.newLine();
-            }
-            for (T item : data) {
-                bw.write(writer.toCsvLine(item));
+    private static void saveCsv(String filename, String header, List<? extends BaseEntity> data) throws IOException {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + filename))) {
+            bw.write(header);
+            bw.newLine();
+            for (BaseEntity entity : data) {
+                bw.write(entity.toCsvLine());
                 bw.newLine();
             }
         }
-    }
-
-    interface CsvWriter<T> {
-        String toCsvLine(T item);
     }
 }

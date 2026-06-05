@@ -1,72 +1,20 @@
 package model;
-
-import model.enums.LockMechanism;
 import model.enums.OrderStatus;
 import util.CsvUtil;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
 public class Order extends BaseEntity {
-    private String customerId;
-    private String eventId;
-    private double totalAmount;
-    private OrderStatus status;
-    private LockMechanism lockMechanism;
-
-    private static final DateTimeFormatter DTF = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-
+    private String customerId; private LocalDateTime orderTime; private OrderStatus status;
     public Order() {}
-
-    public Order(String id, LocalDateTime createdAt, LocalDateTime updatedAt,
-                 String customerId, String eventId, double totalAmount,
-                 OrderStatus status, LockMechanism lockMechanism) {
-        setId(id);
-        setCreatedAt(createdAt);
-        setUpdatedAt(updatedAt);
-        this.customerId = customerId;
-        this.eventId = eventId;
-        this.totalAmount = totalAmount;
-        this.status = status;
-        this.lockMechanism = lockMechanism;
+    public Order(String id, String customerId, LocalDateTime orderTime, OrderStatus status) {
+        setId(id); this.customerId = customerId; this.orderTime = orderTime; this.status = status;
     }
-
-    // Getters & Setters
-    public String getCustomerId() { return customerId; }
-    public void setCustomerId(String customerId) { this.customerId = customerId; }
-    public String getEventId() { return eventId; }
-    public void setEventId(String eventId) { this.eventId = eventId; }
-    public double getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
-    public OrderStatus getStatus() { return status; }
-    public void setStatus(OrderStatus status) { this.status = status; }
-    public LockMechanism getLockMechanism() { return lockMechanism; }
-    public void setLockMechanism(LockMechanism lockMechanism) { this.lockMechanism = lockMechanism; }
-
-    @Override
-    public String toCsvLine() {
-        return String.join(",",
-                getId(),
-                getCreatedAt().format(DTF),
-                getUpdatedAt().format(DTF),
-                customerId,
-                eventId,
-                String.valueOf(Math.round(totalAmount)),
-                status.name(),
-                lockMechanism.name()
-        );
-    }
-
-    @Override
-    public void fromCsvLine(String line) {
-        String[] parts = CsvUtil.splitCsvLine(line);
-        if (parts.length < 8) throw new IllegalArgumentException("Invalid Order CSV line");
-        setId(parts[0].trim());
-        setCreatedAt(LocalDateTime.parse(parts[1].trim(), DTF));
-        setUpdatedAt(LocalDateTime.parse(parts[2].trim(), DTF));
-        this.customerId = parts[3].trim();
-        this.eventId = parts[4].trim();
-        this.totalAmount = Double.parseDouble(parts[5].trim());
-        this.status = OrderStatus.valueOf(parts[6].trim());
-        this.lockMechanism = LockMechanism.valueOf(parts[7].trim());
+    public String getCustomerId() { return customerId; } public void setCustomerId(String customerId) { this.customerId = customerId; }
+    public LocalDateTime getOrderTime() { return orderTime; } public void setOrderTime(LocalDateTime orderTime) { this.orderTime = orderTime; }
+    public OrderStatus getStatus() { return status; } public void setStatus(OrderStatus status) { this.status = status; }
+    @Override public String toCsvLine() { return String.join(",", getId(), customerId, orderTime != null ? orderTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "", status.name()); }
+    @Override public void fromCsvLine(String line) {
+        String[] parts = CsvUtil.splitCsvLine(line); setId(parts[0].trim()); this.customerId = parts[1].trim();
+        this.orderTime = parts[2].isEmpty() ? null : LocalDateTime.parse(parts[2].trim(), DateTimeFormatter.ISO_LOCAL_DATE_TIME); this.status = OrderStatus.valueOf(parts[3].trim());
     }
 }

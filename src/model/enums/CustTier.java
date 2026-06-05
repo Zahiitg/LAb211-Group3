@@ -1,5 +1,4 @@
 package model.enums;
-
 public enum CustTier {
-    NORMAL, VIP, PREMIUM
+    BRONZE, SILVER, GOLD
 }
