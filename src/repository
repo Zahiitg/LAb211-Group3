@@ -1,5 +1,0 @@
-package repository;
-import model.Product;
-public class ProductRepository extends CsvRepository<Product> {
-    public ProductRepository() { super("products.csv", Product::new); }
-}
