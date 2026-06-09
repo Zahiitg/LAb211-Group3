@@ -1,12 +1,12 @@
 package util;
-import model.*;
-import model.enums.*;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import model.*;
+import model.enums.*;
 
 public class DataGenerator {
     private static final String DATA_DIR = "data/";
@@ -48,7 +48,7 @@ public class DataGenerator {
             saveCsv("customers.csv", "id,name,email,password,status,tier", customers);
             saveCsv("products.csv", "id,sellerId,name,category,price,stock", products);
             saveCsv("flash_events.csv", "id,name,startTime,endTime,status", events);
-            saveCsv("flash_items.csv", "id,productId,eventId,limitedQty,soldQty,version", flashItems);
+            saveCsv("flash_items.csv", "id,productId,eventId,salePrice,limitedQty,soldQty,version", flashItems);
             saveCsv("orders.csv", "id,customerId,orderTime,status", orders);
             saveCsv("order_details.csv", "id,orderId,flashSaleItemId,quantity,priceAtPurchase", details);
             saveCsv("transactions.csv", "id,orderId,lockMechanism,retryCount,processingTimeMs,success", transactions);
@@ -64,7 +64,8 @@ public class DataGenerator {
             System.out.println("   OrderDetails: " + details.size());
             System.out.println("   Transactions: " + transactions.size());
 
-        } catch (Exception e) {
+        } catch (IOException e) {
+            System.err.println("Loi khi sinh du lieu: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -128,7 +129,8 @@ public class DataGenerator {
             String prodId = products.get(RANDOM.nextInt(products.size())).getId();
             String eventId = events.get(RANDOM.nextInt(events.size())).getId();
             int limit = RANDOM.nextInt(100) + 10;
-            list.add(new FlashSaleItem(String.format("FI%05d", i), prodId, eventId, limit, RANDOM.nextInt(limit), 1));
+            double salePrice = Math.max(1000.0, products.get(RANDOM.nextInt(products.size())).getPrice() * (0.7 + RANDOM.nextDouble() * 0.3));
+            list.add(new FlashSaleItem(String.format("FI%05d", i), prodId, eventId, salePrice, limit, RANDOM.nextInt(limit), 1));
         }
         return list;
     }

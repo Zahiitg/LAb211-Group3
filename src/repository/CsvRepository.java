@@ -1,8 +1,5 @@
 package repository;
 
-import model.BaseEntity;
-import util.CsvUtil;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,6 +10,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import model.BaseEntity;
 
 /**
  * Abstract Generic CSV Repository - Trai tim cua toan bo tang Data Access.

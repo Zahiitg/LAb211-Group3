@@ -1,12 +1,10 @@
 package test;
 
-import repository.CustomerRepository;
-import repository.AdminRepository;
-import repository.SellerRepository;
-import model.Customer;
-import model.Admin;
-import model.Seller;
 import java.util.List;
+import model.Customer;
+import repository.AdminRepository;
+import repository.CustomerRepository;
+import repository.SellerRepository;
 
 /**
  * Test nhanh de kiem tra CsvRepository co hoat dong dung va nhanh khong.
