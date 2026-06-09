@@ -1,6 +1,5 @@
 package model;
 import model.enums.AccountStatus;
-import util.CsvUtil;
 public abstract class User extends BaseEntity {
     private String name;
     private String email;

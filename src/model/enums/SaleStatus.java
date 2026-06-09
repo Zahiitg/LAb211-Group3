@@ -1,4 +1,4 @@
 package model.enums;
 public enum SaleStatus {
-    UPCOMING, ONGOING, ENDED
+    UPCOMING, ONGOING, ENDED, DISABLED
 }

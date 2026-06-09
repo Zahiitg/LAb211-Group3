@@ -23,11 +23,11 @@ Hệ thống tự động đo lường và xuất báo cáo thống kê về **T
 - **Ngôn ngữ & Thư viện:** Java Core (JDK 8+), không sử dụng bất kỳ thư viện bên thứ ba nào (Pure Java) để chứng minh năng lực hiểu sâu thuật toán lõi.
 
 ## 👨‍💻 4. THÀNH VIÊN NHÓM (GROUP 3)
-| STT | Họ và Tên | MSSV | Vai trò |
-|-----|-----------|------|---------|
-| 1   | Truong Gia Huy | QE190139 | Dev A: Data & Model Lead |
-| 2   | Lê Hoàng Cầu | QE200098 | Dev B: Repository & Lock Lead |
-| 3   | Mai Hoàng  Đăng | QE190050 | Dev C: Controller & Simulator Lead |
-| 4   | Nguyễn Thành Danh | QE200138 | Dev D: View & Integration Lead |
+| STT | Họ và Tên | MSSV |
+|-----|-----------|------|
+| 1   | Truong Gia Huy | QE190139 |
+| 2   | Lê Hoàng Cầu | QE200098 |
+| 3   | Mai Hoàng  Đăng | QE190050 |
+| 4   | Nguyễn Thành Danh | QE200138 |
 
 ---
