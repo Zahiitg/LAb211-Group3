@@ -1,6 +1,9 @@
 package repository;
 
+import java.util.List;
+
 import model.Customer;
+import model.enums.CustTier;
 
 /**
  * Repository quan ly du lieu Customer tu file customers.csv.
@@ -52,5 +55,14 @@ public class CustomerRepository extends CsvRepository<Customer> {
             return c;
         }
         return null;
+    }
+
+    /**
+     * Tim danh sach Customer theo hang (Tier).
+     * @param tier Hang khach hang can tim
+     * @return Danh sach Customer thuoc hang nay
+     */
+    public List<Customer> findByTier(CustTier tier) {
+        return findBy(c -> c.getTier() == tier);
     }
 }
