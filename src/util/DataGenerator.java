@@ -1,12 +1,14 @@
 package util;
+
+import model.*;
+import model.enums.*;
+
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import model.*;
-import model.enums.*;
 
 public class DataGenerator {
     private static final String DATA_DIR = "data/";
@@ -31,150 +33,196 @@ public class DataGenerator {
     }
 
     public static void main(String[] args) {
-        System.out.println("🚀 Started generating data... Please wait.");
+        System.out.println("🚀 Started generating data using Streaming I/O... Please wait.");
         try {
-            List<Admin> admins = generateAdmins(10);
-            List<Seller> sellers = generateSellers(50);
-            List<Customer> customers = generateCustomers(2000);
-            List<Product> products = generateProducts(5000, sellers);
-            List<FlashSaleEvent> events = generateEvents(50);
-            List<FlashSaleItem> flashItems = generateFlashItems(1000, products, events);
-            List<Order> orders = generateOrders(2500, customers);
-            List<OrderDetail> details = generateOrderDetails(4000, orders, flashItems);
-            List<OrderTransaction> transactions = generateTransactions(3000, orders);
-
-            saveCsv("admins.csv", "id,name,email,password,status,roleLevel", admins);
-            saveCsv("sellers.csv", "id,name,email,password,status,storeName", sellers);
-            saveCsv("customers.csv", "id,name,email,password,status,tier", customers);
-            saveCsv("products.csv", "id,sellerId,name,category,price,stock", products);
-            saveCsv("flash_events.csv", "id,name,startTime,endTime,status", events);
-            saveCsv("flash_items.csv", "id,productId,eventId,salePrice,limitedQty,soldQty,version", flashItems);
-            saveCsv("orders.csv", "id,customerId,orderTime,status", orders);
-            saveCsv("order_details.csv", "id,orderId,flashSaleItemId,quantity,priceAtPurchase", details);
-            saveCsv("transactions.csv", "id,orderId,lockMechanism,retryCount,processingTimeMs,success", transactions);
+            List<String> adminIds = generateAdmins(10);
+            List<String> sellerIds = generateSellers(50);
+            List<String> customerIds = generateCustomers(2000);
+            List<String> productIds = generateProducts(5000, sellerIds);
+            List<String> eventIds = generateEvents(50);
+            List<String> flashItemIds = generateFlashItems(1000, productIds, eventIds);
+            List<String> orderIds = generateOrders(2500, customerIds);
+            List<String> detailIds = generateOrderDetails(4000, orderIds, flashItemIds);
+            List<String> transactionIds = generateTransactions(3000, orderIds);
 
             System.out.println("✅ Data generation completed!");
-            System.out.println("   Admins:       " + admins.size());
-            System.out.println("   Sellers:      " + sellers.size());
-            System.out.println("   Customers:    " + customers.size());
-            System.out.println("   Products:     " + products.size());
-            System.out.println("   Events:       " + events.size());
-            System.out.println("   FlashItems:   " + flashItems.size());
-            System.out.println("   Orders:       " + orders.size());
-            System.out.println("   OrderDetails: " + details.size());
-            System.out.println("   Transactions: " + transactions.size());
+            System.out.println("   Admins:       " + adminIds.size());
+            System.out.println("   Sellers:      " + sellerIds.size());
+            System.out.println("   Customers:    " + customerIds.size());
+            System.out.println("   Products:     " + productIds.size());
+            System.out.println("   Events:       " + eventIds.size());
+            System.out.println("   FlashItems:   " + flashItemIds.size());
+            System.out.println("   Orders:       " + orderIds.size());
+            System.out.println("   OrderDetails: " + detailIds.size());
+            System.out.println("   Transactions: " + transactionIds.size());
 
-        } catch (IOException e) {
-            System.err.println("Loi khi sinh du lieu: " + e.getMessage());
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static List<Admin> generateAdmins(int count) {
-        List<Admin> list = new ArrayList<>();
-        for (int i = 1; i <= count; i++) {
-            String name = generateName();
-            list.add(new Admin(String.format("A%05d", i), name, generateEmail(name), "pass123", AccountStatus.APPROVED, 1));
-        }
-        return list;
-    }
-
-    private static List<Seller> generateSellers(int count) {
-        List<Seller> list = new ArrayList<>();
-        for (int i = 1; i <= count; i++) {
-            String name = generateName();
-            list.add(new Seller(String.format("S%05d", i), name, generateEmail(name), "pass123", AccountStatus.APPROVED, name + " Store"));
-        }
-        return list;
-    }
-
-    private static List<Customer> generateCustomers(int count) {
-        List<Customer> list = new ArrayList<>();
-        CustTier[] tiers = CustTier.values();
-        list.add(new Customer("C00001", "Truong Gia Huy", "truonggiahuy@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD));
-        for (int i = 2; i <= count; i++) {
-            String name = generateName();
-            list.add(new Customer(String.format("C%05d", i), name, generateEmail(name), "pass123", RANDOM.nextDouble() > 0.1 ? AccountStatus.APPROVED : AccountStatus.BANNED, tiers[RANDOM.nextInt(tiers.length)]));
-        }
-        return list;
-    }
-
-    private static List<Product> generateProducts(int count, List<Seller> sellers) {
-        List<Product> list = new ArrayList<>();
-        String[] categories = {"Electronics", "Fashion", "Home", "Beauty", "Sports"};
-        for (int i = 1; i <= count; i++) {
-            String sellerId = sellers.get(RANDOM.nextInt(sellers.size())).getId();
-            double generatedPrice = (RANDOM.nextInt(10000) + 50) * 1000.0; // Từ 50,000 đến 10,049,000 VND
-            String prodName = PROD_PREFIXES[RANDOM.nextInt(PROD_PREFIXES.length)] + " " + PROD_SUFFIXES[RANDOM.nextInt(PROD_SUFFIXES.length)];
-            list.add(new Product(String.format("P%05d", i), sellerId, prodName, categories[RANDOM.nextInt(categories.length)], generatedPrice, RANDOM.nextInt(500) + 10));
-        }
-        return list;
-    }
-
-    private static List<FlashSaleEvent> generateEvents(int count) {
-        List<FlashSaleEvent> list = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-        for (int i = 1; i <= count; i++) {
-            LocalDateTime start = now.minusDays(RANDOM.nextInt(30));
-            LocalDateTime end = start.plusHours(RANDOM.nextInt(48) + 1);
-            SaleStatus status = end.isBefore(now) ? SaleStatus.ENDED : SaleStatus.ONGOING;
-            list.add(new FlashSaleEvent(String.format("E%05d", i), "Event " + i, start, end, status));
-        }
-        return list;
-    }
-
-    private static List<FlashSaleItem> generateFlashItems(int count, List<Product> products, List<FlashSaleEvent> events) {
-        List<FlashSaleItem> list = new ArrayList<>();
-        for (int i = 1; i <= count; i++) {
-            String prodId = products.get(RANDOM.nextInt(products.size())).getId();
-            String eventId = events.get(RANDOM.nextInt(events.size())).getId();
-            int limit = RANDOM.nextInt(100) + 10;
-            double salePrice = Math.max(1000.0, products.get(RANDOM.nextInt(products.size())).getPrice() * (0.7 + RANDOM.nextDouble() * 0.3));
-            list.add(new FlashSaleItem(String.format("FI%05d", i), prodId, eventId, salePrice, limit, RANDOM.nextInt(limit), 1));
-        }
-        return list;
-    }
-
-    private static List<Order> generateOrders(int count, List<Customer> customers) {
-        List<Order> list = new ArrayList<>();
-        OrderStatus[] statuses = OrderStatus.values();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-        for (int i = 1; i <= count; i++) {
-            String custId = customers.get(RANDOM.nextInt(customers.size())).getId();
-            list.add(new Order(String.format("O%05d", i), custId, now.minusDays(RANDOM.nextInt(30)), statuses[RANDOM.nextInt(statuses.length)]));
-        }
-        return list;
-    }
-
-    private static List<OrderDetail> generateOrderDetails(int count, List<Order> orders, List<FlashSaleItem> items) {
-        List<OrderDetail> list = new ArrayList<>();
-        for (int i = 1; i <= count; i++) {
-            String orderId = orders.get(RANDOM.nextInt(orders.size())).getId();
-            String itemId = items.get(RANDOM.nextInt(items.size())).getId();
-            double purchasePrice = (RANDOM.nextInt(5000) + 50) * 1000.0; // Random giá mua VND
-            list.add(new OrderDetail(String.format("OD%05d", i), orderId, itemId, RANDOM.nextInt(5) + 1, purchasePrice));
-        }
-        return list;
-    }
-
-    private static List<OrderTransaction> generateTransactions(int count, List<Order> orders) {
-        List<OrderTransaction> list = new ArrayList<>();
-        LockMechanism[] locks = LockMechanism.values();
-        for (int i = 1; i <= count; i++) {
-            String orderId = orders.get(RANDOM.nextInt(orders.size())).getId();
-            list.add(new OrderTransaction(String.format("T%05d", i), orderId, locks[RANDOM.nextInt(locks.length)], RANDOM.nextInt(3), RANDOM.nextInt(500) + 10, RANDOM.nextBoolean()));
-        }
-        return list;
-    }
-
-    private static void saveCsv(String filename, String header, List<? extends BaseEntity> data) throws IOException {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + filename))) {
-            bw.write(header);
+    private static List<String> generateAdmins(int count) throws IOException {
+        List<String> ids = new ArrayList<>();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "admins.csv"))) {
+            bw.write("id,name,email,password,status,roleLevel");
             bw.newLine();
-            for (BaseEntity entity : data) {
-                bw.write(entity.toCsvLine());
+            for (int i = 1; i <= count; i++) {
+                String name = generateName();
+                Admin admin = new Admin(String.format("A%05d", i), name, generateEmail(name), "pass123", AccountStatus.APPROVED, 1);
+                ids.add(admin.getId());
+                bw.write(admin.toCsvLine());
                 bw.newLine();
             }
         }
+        return ids;
+    }
+
+    private static List<String> generateSellers(int count) throws IOException {
+        List<String> ids = new ArrayList<>();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "sellers.csv"))) {
+            bw.write("id,name,email,password,status,storeName");
+            bw.newLine();
+            for (int i = 1; i <= count; i++) {
+                String name = generateName();
+                Seller seller = new Seller(String.format("S%05d", i), name, generateEmail(name), "pass123", AccountStatus.APPROVED, name + " Store");
+                ids.add(seller.getId());
+                bw.write(seller.toCsvLine());
+                bw.newLine();
+            }
+        }
+        return ids;
+    }
+
+    private static List<String> generateCustomers(int count) throws IOException {
+        List<String> ids = new ArrayList<>();
+        CustTier[] tiers = CustTier.values();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "customers.csv"))) {
+            bw.write("id,name,email,password,status,tier");
+            bw.newLine();
+            
+            Customer mainCust = new Customer("C00001", "Truong Gia Huy", "truonggiahuy@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD);
+            ids.add(mainCust.getId());
+            bw.write(mainCust.toCsvLine());
+            bw.newLine();
+
+            for (int i = 2; i <= count; i++) {
+                String name = generateName();
+                Customer customer = new Customer(String.format("C%05d", i), name, generateEmail(name), "pass123", RANDOM.nextDouble() > 0.1 ? AccountStatus.APPROVED : AccountStatus.BANNED, tiers[RANDOM.nextInt(tiers.length)]);
+                ids.add(customer.getId());
+                bw.write(customer.toCsvLine());
+                bw.newLine();
+            }
+        }
+        return ids;
+    }
+
+    private static List<String> generateProducts(int count, List<String> sellerIds) throws IOException {
+        List<String> ids = new ArrayList<>();
+        String[] categories = {"Electronics", "Fashion", "Home", "Beauty", "Sports"};
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "products.csv"))) {
+            bw.write("id,sellerId,name,category,price,stock");
+            bw.newLine();
+            for (int i = 1; i <= count; i++) {
+                String sellerId = sellerIds.get(RANDOM.nextInt(sellerIds.size()));
+                double generatedPrice = (RANDOM.nextInt(10000) + 50) * 1000.0;
+                String prodName = PROD_PREFIXES[RANDOM.nextInt(PROD_PREFIXES.length)] + " " + PROD_SUFFIXES[RANDOM.nextInt(PROD_SUFFIXES.length)];
+                Product product = new Product(String.format("P%05d", i), sellerId, prodName, categories[RANDOM.nextInt(categories.length)], generatedPrice, RANDOM.nextInt(500) + 10);
+                ids.add(product.getId());
+                bw.write(product.toCsvLine());
+                bw.newLine();
+            }
+        }
+        return ids;
+    }
+
+    private static List<String> generateEvents(int count) throws IOException {
+        List<String> ids = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "flash_events.csv"))) {
+            bw.write("id,name,startTime,endTime,status");
+            bw.newLine();
+            for (int i = 1; i <= count; i++) {
+                LocalDateTime start = now.minusDays(RANDOM.nextInt(30));
+                LocalDateTime end = start.plusHours(RANDOM.nextInt(48) + 1);
+                SaleStatus status = end.isBefore(now) ? SaleStatus.ENDED : SaleStatus.ONGOING;
+                FlashSaleEvent event = new FlashSaleEvent(String.format("E%05d", i), "Event " + i, start, end, status);
+                ids.add(event.getId());
+                bw.write(event.toCsvLine());
+                bw.newLine();
+            }
+        }
+        return ids;
+    }
+
+    private static List<String> generateFlashItems(int count, List<String> productIds, List<String> eventIds) throws IOException {
+        List<String> ids = new ArrayList<>();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "flash_items.csv"))) {
+            bw.write("id,productId,eventId,salePrice,limitedQty,soldQty,version");
+            bw.newLine();
+            for (int i = 1; i <= count; i++) {
+                String prodId = productIds.get(RANDOM.nextInt(productIds.size()));
+                String eventId = eventIds.get(RANDOM.nextInt(eventIds.size()));
+                int limit = RANDOM.nextInt(100) + 10;
+                double salePrice = (RANDOM.nextInt(5000) + 50) * 1000.0;
+                FlashSaleItem item = new FlashSaleItem(String.format("FI%05d", i), prodId, eventId, salePrice, limit, RANDOM.nextInt(limit), 1);
+                ids.add(item.getId());
+                bw.write(item.toCsvLine());
+                bw.newLine();
+            }
+        }
+        return ids;
+    }
+
+    private static List<String> generateOrders(int count, List<String> customerIds) throws IOException {
+        List<String> ids = new ArrayList<>();
+        OrderStatus[] statuses = OrderStatus.values();
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "orders.csv"))) {
+            bw.write("id,customerId,orderTime,status");
+            bw.newLine();
+            for (int i = 1; i <= count; i++) {
+                String custId = customerIds.get(RANDOM.nextInt(customerIds.size()));
+                Order order = new Order(String.format("O%05d", i), custId, now.minusDays(RANDOM.nextInt(30)), statuses[RANDOM.nextInt(statuses.length)]);
+                ids.add(order.getId());
+                bw.write(order.toCsvLine());
+                bw.newLine();
+            }
+        }
+        return ids;
+    }
+
+    private static List<String> generateOrderDetails(int count, List<String> orderIds, List<String> itemIds) throws IOException {
+        List<String> ids = new ArrayList<>();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "order_details.csv"))) {
+            bw.write("id,orderId,flashSaleItemId,quantity,priceAtPurchase");
+            bw.newLine();
+            for (int i = 1; i <= count; i++) {
+                String orderId = orderIds.get(RANDOM.nextInt(orderIds.size()));
+                String itemId = itemIds.get(RANDOM.nextInt(itemIds.size()));
+                double purchasePrice = (RANDOM.nextInt(5000) + 50) * 1000.0;
+                OrderDetail detail = new OrderDetail(String.format("OD%05d", i), orderId, itemId, RANDOM.nextInt(5) + 1, purchasePrice);
+                ids.add(detail.getId());
+                bw.write(detail.toCsvLine());
+                bw.newLine();
+            }
+        }
+        return ids;
+    }
+
+    private static List<String> generateTransactions(int count, List<String> orderIds) throws IOException {
+        List<String> ids = new ArrayList<>();
+        LockMechanism[] locks = LockMechanism.values();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "transactions.csv"))) {
+            bw.write("id,orderId,lockMechanism,retryCount,processingTimeMs,success");
+            bw.newLine();
+            for (int i = 1; i <= count; i++) {
+                String orderId = orderIds.get(RANDOM.nextInt(orderIds.size()));
+                OrderTransaction trans = new OrderTransaction(String.format("T%05d", i), orderId, locks[RANDOM.nextInt(locks.length)], RANDOM.nextInt(3), RANDOM.nextInt(500) + 10, RANDOM.nextBoolean());
+                ids.add(trans.getId());
+                bw.write(trans.toCsvLine());
+                bw.newLine();
+            }
+        }
+        return ids;
     }
 }

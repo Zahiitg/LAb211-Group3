@@ -21,7 +21,6 @@ public class FlashSaleEvent extends BaseEntity {
         this.status = status;
     }
 
-    // Getters và Setters
     public String getName() { return name; } 
     public void setName(String name) { this.name = name; }
     public LocalDateTime getStartTime() { return startTime; } 
@@ -38,7 +37,7 @@ public class FlashSaleEvent extends BaseEntity {
             CsvUtil.escapeCsv(name), 
             startTime != null ? startTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "", 
             endTime != null ? endTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "", 
-            status != null ? status.name() : "" // Thêm null-check cho status để an toàn
+            status != null ? status.name() : ""
         );
     }
 
@@ -52,7 +51,6 @@ public class FlashSaleEvent extends BaseEntity {
         this.startTime = parts[2].isEmpty() ? null : LocalDateTime.parse(parts[2].trim(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         this.endTime = parts[3].isEmpty() ? null : LocalDateTime.parse(parts[3].trim(), DateTimeFormatter.ISO_LOCAL_DATE_TIME); 
         
-        // Bổ sung phòng vệ kiểm tra nếu chuỗi trạng thái trống hoặc lỗi
         this.status = (parts.length > 4 && !parts[4].isEmpty()) ? SaleStatus.valueOf(parts[4].trim()) : null;
     }
 }
