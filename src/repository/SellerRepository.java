@@ -1,5 +1,7 @@
 package repository;
 
+import java.util.List;
+
 import model.Seller;
 
 /**
@@ -34,5 +36,15 @@ public class SellerRepository extends CsvRepository<Seller> {
             }
         }
         return null;
+    }
+
+    /**
+     * Tim danh sach Seller theo ten cua hang (StoreName).
+     * @param storeName Ten cua hang can tim (tuong doi, khong phan biet hoa thuong)
+     * @return Danh sach Seller co ten cua hang phu hop
+     */
+    public List<Seller> findByStoreName(String storeName) {
+        String searchStr = storeName.toLowerCase();
+        return findBy(s -> s.getStoreName() != null && s.getStoreName().toLowerCase().contains(searchStr));
     }
 }

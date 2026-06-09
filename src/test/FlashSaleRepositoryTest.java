@@ -48,14 +48,14 @@ public class FlashSaleRepositoryTest {
         List<FlashSaleItem> itemsInEvent = itemRepo.findItemsByEventId("E-TEST-01");
         System.out.println("-> Tim thay " + itemsInEvent.size() + " mat hang thuoc Event 'E-TEST-01'");
 
-        // // --- TEST 3: XÓA ĐỂ DỌN RÁC DATA ---
-        // System.out.println("\n[TEST 3] Tien hanh xoa du lieu test de don dep file...");
-        // boolean eventDeleted = eventRepo.delete("E-TEST-01");
-        // boolean itemDeleted = itemRepo.delete("ITEM-TEST-01");
+        // --- TEST 3: XÓA ĐỂ DỌN RÁC DATA ---
+        System.out.println("\n[TEST 3] Tien hanh xoa du lieu test de don dep file...");
+        boolean eventDeleted = eventRepo.delete("E-TEST-01");
+        boolean itemDeleted = itemRepo.delete("ITEM-TEST-01");
         
-        // System.out.println("-> Xoa Event test: " + (eventDeleted ? "THANH CONG" : "THAT BAI"));
-        // System.out.println("-> Xoa Item test: " + (itemDeleted ? "THANH CONG" : "THAT BAI"));
-        // System.out.println("-> Tong so Event sau khi don dep: " + eventRepo.count());
+        System.out.println("-> Xoa Event test: " + (eventDeleted ? "THANH CONG" : "THAT BAI"));
+        System.out.println("-> Xoa Item test: " + (itemDeleted ? "THANH CONG" : "THAT BAI"));
+        System.out.println("-> Tong so Event sau khi don dep: " + eventRepo.count());
 
         System.out.println("\n==========================================================================");
         System.out.println("===                    PHASE 2 WORK - ALL TESTS PASSED                 ===");
