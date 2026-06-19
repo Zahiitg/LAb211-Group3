@@ -5,52 +5,80 @@ import model.enums.AccountStatus;
 import model.enums.CustTier;
 import repository.CustomerRepository;
 
-public class CustomerController {
+/**
+ * Controller xu ly toan bo nghiep vu lien quan den Khach hang (Customer).
+ *
+ * Chuc nang:
+ * 1. register(name, email, password) → Dang ky tai khoan moi
+ * 2. login(email, password)          → Dang nhap va luu phien vao AuthenticationState
+ *
+ * Tat ca ham deu tra ve ControllerResult de tang View xu ly nhat quan,
+ * KHONG BAO GIO quang Exception ra ngoai hoac tra ve null.
+ *
+ * @author Thanh vien 2 - Customer Logic
+ * @refactored-by Thanh vien 1 - Core Architecture (ap dung chuan BaseController)
+ */
+public class CustomerController extends BaseController {
+
     private final CustomerRepository customerRepo;
 
+    // =====================================================================
+    // CONSTRUCTORS
+    // =====================================================================
+
     /**
-     * Default constructor using the production file path.
+     * Constructor mac dinh - su dung duong dan file CSV chuan cua du an.
      */
     public CustomerController() {
         this.customerRepo = new CustomerRepository("data/customers.csv");
     }
 
     /**
-     * Constructor for testing or custom file paths.
-     * @param filePath Path to the customers CSV file
+     * Constructor cho testing hoac duong dan tuy chinh.
+     * @param filePath Duong dan den file CSV customers
      */
     public CustomerController(String filePath) {
         this.customerRepo = new CustomerRepository(filePath);
     }
 
+    // =====================================================================
+    // DANG KY TAI KHOAN
+    // =====================================================================
+
     /**
-     * Registers a new customer after checking for duplicate email.
-     * Generates a new ID in the format CXXXXX.
-     * Default tier is BRONZE, status is APPROVED.
-     * 
-     * @param name Customer name
-     * @param email Customer email
-     * @param password Customer password
-     * @return The registered Customer object
-     * @throws IllegalArgumentException if the email is already registered or inputs are invalid
+     * Dang ky tai khoan Customer moi.
+     *
+     * Quy trinh:
+     * 1. Kiem tra du lieu dau vao (Name, Email, Password khong duoc rong).
+     * 2. Kiem tra trung Email trong CSDL.
+     * 3. Sinh ma ID tu dong tang (C00001, C00002, ...).
+     * 4. Tao Customer moi voi trang thai APPROVED va hang BRONZE.
+     * 5. Luu vao file CSV.
+     *
+     * @param name     Ten khach hang
+     * @param email    Email (phai duy nhat)
+     * @param password Mat khau
+     * @return ControllerResult chua Customer object neu thanh cong,
+     *         hoac thong bao loi neu that bai
      */
-    public Customer register(String name, String email, String password) {
+    public ControllerResult register(String name, String email, String password) {
+        // --- VALIDATION ---
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Name cannot be empty!");
+            return error("Ten khong duoc de trong!");
         }
         if (email == null || email.trim().isEmpty()) {
-            throw new IllegalArgumentException("Email cannot be empty!");
+            return error("Email khong duoc de trong!");
         }
         if (password == null || password.trim().isEmpty()) {
-            throw new IllegalArgumentException("Password cannot be empty!");
+            return error("Mat khau khong duoc de trong!");
         }
 
-        // Check duplicate email
-        if (customerRepo.getByEmail(email) != null) {
-            throw new IllegalArgumentException("Email '" + email + "' is already registered!");
+        // --- KIEM TRA TRUNG EMAIL ---
+        if (customerRepo.getByEmail(email.trim()) != null) {
+            return error("Email '" + email.trim() + "' da duoc dang ky truoc do!");
         }
 
-        // Generate next ID
+        // --- SINH MA ID TU DONG ---
         int maxNum = 0;
         for (Customer c : customerRepo.getAll()) {
             String id = c.getId();
@@ -65,32 +93,89 @@ public class CustomerController {
         }
         String newId = String.format("C%05d", maxNum + 1);
 
-        Customer newCust = new Customer(newId, name.trim(), email.trim(), password, AccountStatus.APPROVED, CustTier.BRONZE);
+        // --- TAO VA LUU CUSTOMER MOI ---
+        Customer newCust = new Customer(
+            newId,
+            name.trim(),
+            email.trim(),
+            password,
+            AccountStatus.APPROVED,
+            CustTier.BRONZE
+        );
         customerRepo.add(newCust);
-        return newCust;
+
+        return success("Dang ky thanh cong! Chao mung " + newCust.getName()
+                       + " (Ma KH: " + newId + ")", newCust);
     }
 
+    // =====================================================================
+    // DANG NHAP
+    // =====================================================================
+
     /**
-     * Authenticates a customer.
-     * Only allows logging in if credentials are correct and status is APPROVED.
-     * 
-     * @param email Customer email
-     * @param password Customer password
-     * @return The Customer object if login is successful, null otherwise
+     * Xac thuc va dang nhap Customer.
+     *
+     * Quy trinh:
+     * 1. Kiem tra du lieu dau vao.
+     * 2. Tim Customer theo email va doi chieu mat khau.
+     * 3. Kiem tra trang thai tai khoan (BANNED → tu choi, PENDING → canh bao).
+     * 4. Neu hop le → luu phien dang nhap vao AuthenticationState (Singleton).
+     *
+     * @param email    Email dang nhap
+     * @param password Mat khau
+     * @return ControllerResult chua Customer object neu thanh cong,
+     *         hoac thong bao loi cu the neu that bai
      */
-    public Customer login(String email, String password) {
-        if (email == null || password == null) {
-            return null;
+    public ControllerResult login(String email, String password) {
+        // --- VALIDATION ---
+        if (email == null || email.trim().isEmpty()) {
+            return error("Email khong duoc de trong!");
         }
-        Customer c = customerRepo.authenticate(email, password);
-        if (c != null && c.getStatus() == AccountStatus.APPROVED) {
-            return c;
+        if (password == null || password.trim().isEmpty()) {
+            return error("Mat khau khong duoc de trong!");
         }
-        return null;
+
+        // --- TIM CUSTOMER THEO EMAIL ---
+        Customer c = customerRepo.getByEmail(email.trim());
+        if (c == null) {
+            return error("Email hoac mat khau khong chinh xac!");
+        }
+
+        // --- DOI CHIEU MAT KHAU ---
+        if (!c.getPassword().equals(password)) {
+            return error("Email hoac mat khau khong chinh xac!");
+        }
+
+        // --- KIEM TRA TRANG THAI TAI KHOAN ---
+        if (c.getStatus() == AccountStatus.BANNED) {
+            return error("Tai khoan cua ban da bi khoa (BANNED). "
+                        + "Vui long lien he Admin de duoc ho tro!");
+        }
+
+        // --- LUU PHIEN DANG NHAP ---
+        // Su dung AuthenticationState (Singleton) cua he thong
+        // Luu y: authState duoc ke thua tu BaseController
+        // Tuy nhien vi AuthenticationState co ham login() rieng,
+        // o day ta chi set currentUser thong qua phuong thuc login cua AuthenticationState
+        // De tranh goi chong cheo, ta su dung truc tiep:
+        AuthenticationState.getInstance().loginDirect(c);
+
+        // --- TRA VE KET QUA ---
+        String statusNote = "";
+        if (c.getStatus() == AccountStatus.PENDING) {
+            statusNote = " (Luu y: Tai khoan dang cho duyet, "
+                       + "mot so chuc nang co the bi han che)";
+        }
+
+        return success("Dang nhap thanh cong! Xin chao " + c.getName() + statusNote, c);
     }
 
+    // =====================================================================
+    // GETTER
+    // =====================================================================
+
     /**
-     * Gets the customer repo (useful for tests/admin view).
+     * Lay CustomerRepository (dung cho Admin hoac Unit Test).
      * @return CustomerRepository
      */
     public CustomerRepository getCustomerRepo() {

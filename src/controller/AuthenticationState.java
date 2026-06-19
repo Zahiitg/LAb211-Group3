@@ -204,6 +204,25 @@ public class AuthenticationState {
     }
 
     // =====================================================================
+    // DANG NHAP TRUC TIEP (DANH CHO CONTROLLER CON)
+    // =====================================================================
+
+    /**
+     * Luu truc tiep User da duoc xac thuc vao phien dang nhap.
+     *
+     * Phuong thuc nay KHAC voi login(email, password):
+     * - login(email, password): Tu dong tim kiem trong DB va validate.
+     * - loginDirect(user): Nhan User da duoc Controller con validate san,
+     *   chi viec luu vao phien. Tranh viec Controller con phai goi
+     *   login(email, password) roi AuthenticationState lai validate lan nua.
+     *
+     * @param user Doi tuong User da duoc xac thuc thanh cong
+     */
+    public void loginDirect(User user) {
+        this.currentUser = user;
+    }
+
+    // =====================================================================
     // KIEM TRA TRANG THAI DANG NHAP
     // =====================================================================
 
