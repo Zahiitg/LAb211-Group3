@@ -1,7 +1,6 @@
 package test;
 
 import static org.junit.Assert.*;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -136,5 +135,3 @@ public class RepositoryJUnitTest {
         System.out.println("[INFO] Tim thay " + bannedList.size() + " Customer BANNED");
     }
 }
-// & "C:\Program Files\Java\jdk1.8.0_202\bin\java.exe" -cp "out;lib/*" org.junit.runner.JUnitCore test.RepositoryJUnitTest //
-// dùng để test RepositoryJUnitTest 
