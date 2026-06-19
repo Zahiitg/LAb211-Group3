@@ -6,6 +6,7 @@ import org.junit.Test;
 import model.Customer;
 import model.Product;
 import model.Seller;
+import model.Guest;
 import model.enums.AccountStatus;
 import model.enums.CustTier;
 
@@ -120,5 +121,25 @@ public class CsvParseJUnitTest {
         assertEquals("Dien thoai iPhone 15, Mau do, 256GB", parsed.getName());
         assertEquals("Electronics, Phones", parsed.getCategory());
         assertEquals(25000000.0, parsed.getPrice(), 0.001);
+    }
+
+    // ========================================================================
+    // TEST GUEST CSV
+    // ========================================================================
+
+    @Test
+    public void testGuestCsvRoundTrip() {
+        Guest g = new Guest("session_xyz123");
+        String csv = g.toCsvLine();
+
+        Guest parsed = new Guest();
+        parsed.fromCsvLine(csv);
+
+        assertEquals("GUEST_session_xyz123", parsed.getId());
+        assertEquals("session_xyz123", parsed.getSessionId());
+        assertEquals("Guest", parsed.getName());
+        assertEquals("", parsed.getEmail());
+        assertEquals("", parsed.getPassword());
+        assertEquals(AccountStatus.APPROVED, parsed.getStatus());
     }
 }
