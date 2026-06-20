@@ -70,4 +70,37 @@ public class OrderTest {
         assertEquals(OrderStatus.PENDING,
                 order.getStatus());
     }
+
+    @Test
+    public void testOrderAllStatuses() {
+        // Kiem tra tat ca trang thai OrderStatus deu duoc serialize/deserialize dung
+        OrderStatus[] allStatuses = { OrderStatus.PENDING, OrderStatus.VERIFIED,
+                OrderStatus.COMPLETED, OrderStatus.FAILED,
+                OrderStatus.CANCELLED };
+
+        for (OrderStatus status : allStatuses) {
+            Order order = new Order("ORD_TEST", "C00001",
+                    LocalDateTime.of(2026, 1, 1, 0, 0), status);
+            String csv = order.toCsvLine();
+            Order parsed = new Order();
+            parsed.fromCsvLine(csv);
+
+            assertEquals("Trang thai " + status + " phai khop sau RoundTrip",
+                    status, parsed.getStatus());
+        }
+    }
+
+    @Test
+    public void testOrderNullOrderTime() {
+        Order order = new Order("ORD00002", "C00005", null, OrderStatus.FAILED);
+        String csv = order.toCsvLine();
+
+        // Khi orderTime la null, CSV phai co truong rong ""
+        Order parsed = new Order();
+        parsed.fromCsvLine(csv);
+
+        assertEquals("ORD00002", parsed.getId());
+        assertNull("OrderTime phai la null khi truong CSV rong", parsed.getOrderTime());
+        assertEquals(OrderStatus.FAILED, parsed.getStatus());
+    }
 }

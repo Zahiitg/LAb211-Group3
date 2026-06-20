@@ -71,4 +71,17 @@ public class OrderDetailTest {
         assertEquals(2, detail.getQuantity());
         assertEquals(99.5, detail.getPriceAtPurchase(), 0.001);
     }
+
+    @Test
+    public void testOrderDetailLargeValues() {
+        // Kiem tra voi so luong lon va gia tien lon (tranh loi tran so)
+        OrderDetail detail = new OrderDetail("OD00099", "ORD00050", "FSI999",
+                999, 99999999.99);
+        String csv = detail.toCsvLine();
+        OrderDetail parsed = new OrderDetail();
+        parsed.fromCsvLine(csv);
+
+        assertEquals(999, parsed.getQuantity());
+        assertEquals(99999999.99, parsed.getPriceAtPurchase(), 0.01);
+    }
 }
