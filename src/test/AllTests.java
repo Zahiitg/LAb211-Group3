@@ -10,6 +10,7 @@ import org.junit.runners.Suite;
         ProductRepositoryJUnitTest.class,
         FlashSaleRepositoryJUnitTest.class,
         FlashSaleEngineJUnitTest.class,
+        FlashSaleControllerJUnitTest.class,
         AdminControllerJUnitTest.class,
         CustomerControllerJUnitTest.class,
         OrderControllerJUnitTest.class,

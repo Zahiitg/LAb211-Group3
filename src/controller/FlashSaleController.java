@@ -3,7 +3,10 @@ package controller;
 import model.FlashSaleEvent;
 import model.FlashSaleItem;
 import model.Product;
+import model.enums.SaleStatus;
 import repository.FlashSaleEventRepository;
+import repository.FlashSaleItemRepository;
+import repository.ProductRepository;
 import java.util.List;
 
 /**
@@ -23,8 +26,8 @@ import java.util.List;
 public class FlashSaleController extends BaseController {
 
     private final FlashSaleEventRepository eventRepo;
-    private final repository.FlashSaleItemRepository itemRepo;
-    private final repository.ProductRepository productRepo;
+    private final FlashSaleItemRepository itemRepo;
+    private final ProductRepository productRepo;
 
     // =====================================================================
     // CONSTRUCTORS
@@ -35,8 +38,8 @@ public class FlashSaleController extends BaseController {
      */
     public FlashSaleController() {
         this.eventRepo = new FlashSaleEventRepository("data/flash_events.csv");
-        this.itemRepo = new repository.FlashSaleItemRepository("data/flash_items.csv");
-        this.productRepo = new repository.ProductRepository("data/products.csv");
+        this.itemRepo = new FlashSaleItemRepository("data/flash_items.csv");
+        this.productRepo = new ProductRepository("data/products.csv");
     }
 
     /**
@@ -45,8 +48,20 @@ public class FlashSaleController extends BaseController {
      */
     public FlashSaleController(String filePath) {
         this.eventRepo = new FlashSaleEventRepository(filePath);
-        this.itemRepo = new repository.FlashSaleItemRepository("data/flash_items.csv");
-        this.productRepo = new repository.ProductRepository("data/products.csv");
+        this.itemRepo = new FlashSaleItemRepository("data/flash_items.csv");
+        this.productRepo = new ProductRepository("data/products.csv");
+    }
+
+    /**
+     * Constructor cho testing voi file su kien va mat hang tuy chinh.
+     *
+     * @param eventFilePath duong dan file CSV flash events
+     * @param itemFilePath  duong dan file CSV flash sale items
+     */
+    public FlashSaleController(String eventFilePath, String itemFilePath) {
+        this.eventRepo = new FlashSaleEventRepository(eventFilePath);
+        this.itemRepo = new FlashSaleItemRepository(itemFilePath);
+        this.productRepo = new ProductRepository("data/products.csv");
     }
 
     // =====================================================================
@@ -70,17 +85,79 @@ public class FlashSaleController extends BaseController {
     }
 
     /**
-     * Lay danh sach san pham theo Event ID.
+     * Lay danh sach mat hang dang tham gia mot su kien Flash Sale.
+     *
+     * @param eventId ID cua su kien
+     * @return ControllerResult chua List&lt;FlashSaleItem&gt;
+     */
+    public ControllerResult listItems(String eventId) {
+        if (eventId == null || eventId.trim().isEmpty()) {
+            return error("Event ID khong duoc de trong!");
+        }
+
+        String normalizedId = eventId.trim();
+        if (eventRepo.getById(normalizedId) == null) {
+            return error("Khong tim thay Flash Sale Event voi ID: " + normalizedId);
+        }
+
+        List<FlashSaleItem> items = itemRepo.findItemsByEventId(normalizedId);
+        return success("Tim thay " + items.size()
+            + " mat hang trong su kien " + normalizedId + ".", items);
+    }
+
+    /**
+     * API cu duoc giu lai de khong anh huong cac View dang su dung.
      */
     public ControllerResult getItemsByEventId(String eventId) {
-        List<FlashSaleItem> items = itemRepo.findItemsByEventId(eventId);
-        return success("Tim thay " + items.size() + " san pham Flash Sale.", items);
+        return listItems(eventId);
+    }
+
+    /**
+     * Kich hoat mot su kien Flash Sale.
+     *
+     * @param eventId ID cua su kien
+     * @return ControllerResult chua event da cap nhat
+     */
+    public ControllerResult startEvent(String eventId) {
+        return updateEventStatus(eventId, SaleStatus.ONGOING, "kich hoat");
+    }
+
+    /**
+     * Ket thuc mot su kien Flash Sale.
+     *
+     * @param eventId ID cua su kien
+     * @return ControllerResult chua event da cap nhat
+     */
+    public ControllerResult endEvent(String eventId) {
+        return updateEventStatus(eventId, SaleStatus.ENDED, "ket thuc");
+    }
+
+    private ControllerResult updateEventStatus(
+            String eventId, SaleStatus targetStatus, String action) {
+        if (eventId == null || eventId.trim().isEmpty()) {
+            return error("Event ID khong duoc de trong!");
+        }
+
+        String normalizedId = eventId.trim();
+        FlashSaleEvent event = eventRepo.getById(normalizedId);
+        if (event == null) {
+            return error("Khong tim thay Flash Sale Event voi ID: " + normalizedId);
+        }
+        if (event.getStatus() == targetStatus) {
+            return error("Su kien " + normalizedId + " da o trang thai "
+                + targetStatus + ".");
+        }
+
+        event.setStatus(targetStatus);
+        eventRepo.update(event);
+        return success("Da " + action + " su kien " + normalizedId
+            + " (" + targetStatus + ").", event);
     }
 
     /**
      * Lay san pham theo ID.
      */
-    public model.Product getProductById(String productId) {
+    public Product getProductById(String productId) {
         return productRepo.getById(productId);
     }
 
