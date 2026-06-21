@@ -22,7 +22,7 @@ public class CustomerRepository extends CsvRepository<Customer> {
 
     @Override
     protected String getHeader() {
-        return "id,name,email,password,status,tier";
+        return "id,name,email,password,status,tier,address";
     }
 
     // ========================================================================

@@ -1,6 +1,8 @@
 package controller;
 
 import model.FlashSaleEvent;
+import model.FlashSaleItem;
+import model.Product;
 import repository.FlashSaleEventRepository;
 import java.util.List;
 
@@ -21,6 +23,8 @@ import java.util.List;
 public class FlashSaleController extends BaseController {
 
     private final FlashSaleEventRepository eventRepo;
+    private final repository.FlashSaleItemRepository itemRepo;
+    private final repository.ProductRepository productRepo;
 
     // =====================================================================
     // CONSTRUCTORS
@@ -31,6 +35,8 @@ public class FlashSaleController extends BaseController {
      */
     public FlashSaleController() {
         this.eventRepo = new FlashSaleEventRepository("data/flash_events.csv");
+        this.itemRepo = new repository.FlashSaleItemRepository("data/flash_items.csv");
+        this.productRepo = new repository.ProductRepository("data/products.csv");
     }
 
     /**
@@ -39,6 +45,8 @@ public class FlashSaleController extends BaseController {
      */
     public FlashSaleController(String filePath) {
         this.eventRepo = new FlashSaleEventRepository(filePath);
+        this.itemRepo = new repository.FlashSaleItemRepository("data/flash_items.csv");
+        this.productRepo = new repository.ProductRepository("data/products.csv");
     }
 
     // =====================================================================
@@ -59,6 +67,21 @@ public class FlashSaleController extends BaseController {
         }
 
         return success("Tim thay " + events.size() + " su kien Flash Sale.", events);
+    }
+
+    /**
+     * Lay danh sach san pham theo Event ID.
+     */
+    public ControllerResult getItemsByEventId(String eventId) {
+        List<FlashSaleItem> items = itemRepo.findItemsByEventId(eventId);
+        return success("Tim thay " + items.size() + " san pham Flash Sale.", items);
+    }
+
+    /**
+     * Lay san pham theo ID.
+     */
+    public model.Product getProductById(String productId) {
+        return productRepo.getById(productId);
     }
 
     /**

@@ -58,10 +58,11 @@ public class CustomerController extends BaseController {
      * @param name     Ten khach hang
      * @param email    Email (phai duy nhat)
      * @param password Mat khau
+     * @param address  Dia chi giao hang (co the de trong)
      * @return ControllerResult chua Customer object neu thanh cong,
      *         hoac thong bao loi neu that bai
      */
-    public ControllerResult register(String name, String email, String password) {
+    public ControllerResult register(String name, String email, String password, String address) {
         // --- VALIDATION ---
         if (name == null || name.trim().isEmpty()) {
             return error("Ten khong duoc de trong!");
@@ -100,7 +101,8 @@ public class CustomerController extends BaseController {
             email.trim(),
             password,
             AccountStatus.APPROVED,
-            CustTier.BRONZE
+            CustTier.BRONZE,
+            address != null ? address.trim() : ""
         );
         customerRepo.add(newCust);
 
@@ -168,6 +170,20 @@ public class CustomerController extends BaseController {
         }
 
         return success("Dang nhap thanh cong! Xin chao " + c.getName() + statusNote, c);
+    }
+
+    // =====================================================================
+    // CAP NHAT HO SO
+    // =====================================================================
+
+    /**
+     * Cap nhat ho so cua Customer (hien tai chi ho tro dia chi).
+     */
+    public ControllerResult updateProfile(Customer c, String newAddress) {
+        if (c == null) return error("Khong tim thay thong tin khach hang.");
+        c.setAddress(newAddress);
+        customerRepo.update(c);
+        return success("Cap nhat ho so thanh cong!", c);
     }
 
     // =====================================================================

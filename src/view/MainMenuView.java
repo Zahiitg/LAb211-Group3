@@ -38,8 +38,7 @@ public class MainMenuView {
                     handleLogin();
                     break;
                 case 2:
-                    ConsoleUI.printError("Chuc nang dang ky do TV2 dam nhiem, dang duoc xay dung.");
-                    ConsoleUI.pause();
+                    handleRegister();
                     break;
                 case 0:
                     ConsoleUI.printSuccess("Cam on ban da su dung phan mem. Tam biet!");
@@ -68,9 +67,8 @@ public class MainMenuView {
                 AdminView adminView = new AdminView();
                 adminView.start(); // Chuyen quyen dieu khien sang AdminView
             } else if (authState.isCustomer()) {
-                ConsoleUI.printError("CustomerView do TV2 dam nhiem, chua duoc xay dung.");
-                authState.logout(); // Dang xuat tam thoi de tranh loi khet
-                ConsoleUI.pause();
+                CustomerView customerView = new CustomerView();
+                customerView.start(); // Chuyen quyen dieu khien sang CustomerView
             } else if (authState.isSeller()) {
                 ConsoleUI.printError("SellerView do TV2 dam nhiem, chua duoc xay dung.");
                 authState.logout(); // Dang xuat tam thoi de tranh loi khet
@@ -80,5 +78,32 @@ public class MainMenuView {
             ConsoleUI.printError(result.getMessage());
             ConsoleUI.pause();
         }
+    }
+
+    /**
+     * Xu ly form dang ky Customer.
+     */
+    private void handleRegister() {
+        ConsoleUI.printHeader("DANG KY TAI KHOAN CUSTOMER");
+        String name = ConsoleUI.getString("Nhap Ho va Ten: ");
+        if (name.isEmpty()) return;
+        
+        String email = ConsoleUI.getString("Nhap Email: ");
+        if (email.isEmpty()) return;
+        
+        String password = ConsoleUI.getString("Nhap Password: ");
+        if (password.isEmpty()) return;
+        
+        String address = ConsoleUI.getString("Nhap Dia chi giao hang (co the de trong): ");
+
+        controller.CustomerController customerController = new controller.CustomerController();
+        ControllerResult result = customerController.register(name, email, password, address);
+
+        if (result.isSuccess()) {
+            ConsoleUI.printSuccess(result.getMessage());
+        } else {
+            ConsoleUI.printError(result.getMessage());
+        }
+        ConsoleUI.pause();
     }
 }

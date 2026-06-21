@@ -16,12 +16,17 @@ import model.BaseEntity;
  * Abstract Generic CSV Repository - Trai tim cua toan bo tang Data Access.
  *
  * Cach hoat dong:
- * 1. Khi khoi tao (Constructor), doc TOAN BO file CSV len RAM (Cache) bang BufferedReader.
- * 2. Moi thao tac Tim kiem (getById) deu truy xuat tu HashMap => Toc do O(1), cuc nhanh.
- * 3. Moi thao tac Ghi (add/update/delete) se cap nhat Cache TRUOC, roi ghi de lai TOAN BO file CSV.
+ * 1. Khi khoi tao (Constructor), doc TOAN BO file CSV len RAM (Cache) bang
+ * BufferedReader.
+ * 2. Moi thao tac Tim kiem (getById) deu truy xuat tu HashMap => Toc do O(1),
+ * cuc nhanh.
+ * 3. Moi thao tac Ghi (add/update/delete) se cap nhat Cache TRUOC, roi ghi de
+ * lai TOAN BO file CSV.
  *
- * Uu diem: Doc 10.000 dong < 1 giay. Thiet ke Generic de moi Entity deu dung lai duoc.
- * Nhuoc diem: Khong an toan voi Da luong (Multi-thread) => Dev B se bo sung Lock vao lop con.
+ * Uu diem: Doc 10.000 dong < 1 giay. Thiet ke Generic de moi Entity deu dung
+ * lai duoc.
+ * Nhuoc diem: Khong an toan voi Da luong (Multi-thread) => Dev B se bo sung
+ * Lock vao lop con.
  *
  * @param <T> Kieu Entity ke thua tu BaseEntity
  */
@@ -38,7 +43,8 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
 
     /**
      * Constructor - Doc toan bo file CSV len Cache.
-     * @param filePath Duong dan toi file CSV (vi du: "data/customers.csv")
+     * 
+     * @param filePath  Duong dan toi file CSV (vi du: "data/customers.csv")
      * @param hasHeader true neu file CSV co dong tieu de o dong dau tien
      */
     public CsvRepository(String filePath, boolean hasHeader) {
@@ -54,6 +60,7 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
     /**
      * Tao 1 instance Entity rong (dung de goi fromCsvLine()).
      * Vi du: return new Customer();
+     * 
      * @return Entity rong chua co du lieu
      */
     protected abstract T createEntity();
@@ -114,6 +121,7 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
     /**
      * Tim kiem Entity theo dieu kien bat ky (dung Lambda/Predicate).
      * Vi du: findBy(c -> c.getName().contains("Huy"))
+     * 
      * @param predicate Dieu kien loc
      * @return Danh sach Entity thoa man dieu kien
      */
@@ -133,7 +141,8 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
 
     /**
      * Doc toan bo file CSV len Cache (RAM).
-     * Su dung BufferedReader de doc tung dong, parse thanh Entity roi dua vao HashMap.
+     * Su dung BufferedReader de doc tung dong, parse thanh Entity roi dua vao
+     * HashMap.
      * Dong header (neu co) se duoc bo qua.
      */
     private void loadFromFile() {
@@ -166,7 +175,7 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
                 cache.put(entity.getId(), entity);
             }
 
-            System.out.println("[CsvRepository] Da doc " + cache.size() + " ban ghi tu: " + filePath);
+            //System.out.println("[CsvRepository] Da doc " + cache.size() + " ban ghi tu: " + filePath);
 
         } catch (IOException e) {
             System.err.println("[CsvRepository] Loi doc file: " + filePath + " - " + e.getMessage());
@@ -202,6 +211,7 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
     /**
      * Tra ve dong Header cua file CSV.
      * Lop con co the override de tuy chinh. Mac dinh tra ve chuoi rong.
+     * 
      * @return Chuoi header
      */
     protected String getHeader() {
@@ -218,6 +228,7 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
 
     /**
      * Lay duong dan file CSV.
+     * 
      * @return duong dan file
      */
     public String getFilePath() {

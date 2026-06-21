@@ -12,6 +12,7 @@ import repository.OrderDetailRepository;
 import repository.OrderTransactionRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Controller xu ly toan bo quy trinh DAT HANG (Order Placement).
@@ -34,6 +35,7 @@ public class OrderController extends BaseController {
     private final OrderDetailRepository detailRepo;
     private final OrderTransactionRepository txRepo;
     private final FlashSaleItemRepository itemRepo;
+    private final repository.ProductRepository productRepo;
 
     // =====================================================================
     // CONSTRUCTORS
@@ -45,8 +47,9 @@ public class OrderController extends BaseController {
     public OrderController() {
         this.orderRepo = new OrderRepository("data/orders.csv");
         this.detailRepo = new OrderDetailRepository("data/order_details.csv");
-        this.txRepo = new OrderTransactionRepository("data/order_transactions.csv");
+        this.txRepo = new OrderTransactionRepository("data/transactions.csv");
         this.itemRepo = new FlashSaleItemRepository("data/flash_items.csv");
+        this.productRepo = new repository.ProductRepository("data/products.csv");
     }
 
     /**
@@ -63,6 +66,7 @@ public class OrderController extends BaseController {
         this.detailRepo = new OrderDetailRepository(detailFile);
         this.txRepo = new OrderTransactionRepository(txFile);
         this.itemRepo = new FlashSaleItemRepository(itemFile);
+        this.productRepo = new repository.ProductRepository("data/products.csv");
     }
 
     // =====================================================================
@@ -121,6 +125,90 @@ public class OrderController extends BaseController {
                                                           String flashSaleItemId,
                                                           int quantity) {
         return placeOrderInternal(customerId, flashSaleItemId, quantity, LockMechanism.OPTIMISTIC_LOCK);
+    }
+
+    public ControllerResult placeProductOrder(String customerId,
+                                               String productId,
+                                               int quantity,
+                                               LockMechanism mechanism) {
+        // --- VALIDATION ---
+        if (customerId == null || customerId.trim().isEmpty()) {
+            return error("Ma khach hang khong duoc de trong!");
+        }
+        if (productId == null || productId.trim().isEmpty()) {
+            return error("Ma san pham khong duoc de trong!");
+        }
+        if (quantity <= 0) {
+            return error("So luong mua phai lon hon 0!");
+        }
+
+        // --- TIM SAN PHAM THUONG ---
+        model.Product product = productRepo.getById(productId);
+        if (product == null) {
+            return error("Khong tim thay san pham voi ma: " + productId);
+        }
+
+        // --- BAT DAU DO THOI GIAN ---
+        long startTime = System.currentTimeMillis();
+
+        // --- TRU KHO BANG CO CHE LOCK TUONG UNG ---
+        boolean stockDeducted;
+        switch (mechanism) {
+            case NO_LOCK:
+                stockDeducted = productRepo.sellWithNoLock(productId, quantity);
+                break;
+            case SYNCHRONIZED:
+                stockDeducted = productRepo.sellWithSynchronized(productId, quantity);
+                break;
+            case FILE_LOCK:
+                stockDeducted = productRepo.sellWithFileLock(productId, quantity);
+                break;
+            case OPTIMISTIC_LOCK:
+                stockDeducted = productRepo.sellWithOptimisticLock(productId, quantity);
+                break;
+            default:
+                stockDeducted = false;
+        }
+
+        // --- DO THOI GIAN XU LY ---
+        long processingTime = System.currentTimeMillis() - startTime;
+
+        // --- XU LY KET QUA ---
+        if (!stockDeducted) {
+            // Tru kho THAT BAI → Ghi nhat ky that bai
+            String txId = generateId("TX", txRepo.count());
+            OrderTransaction failTx = new OrderTransaction(
+                txId, "", mechanism, 0, processingTime, false
+            );
+            txRepo.add(failTx);
+
+            return error("Dat hang that bai! San pham '"
+                        + productId + "' da het hang hoac khong du so luong.");
+        }
+
+        // --- TAO DON HANG ---
+        String orderId = generateId("ORD", orderRepo.count());
+        Order order = new Order(orderId, customerId, LocalDateTime.now(), OrderStatus.PENDING);
+        orderRepo.add(order);
+
+        // --- TAO CHI TIET DON HANG ---
+        String detailId = generateId("OD", detailRepo.count());
+        OrderDetail detail = new OrderDetail(
+            detailId, orderId, productId, quantity, product.getPrice()
+        );
+        detailRepo.add(detail);
+
+        // --- GHI NHAT KY GIAO DICH ---
+        String txId = generateId("TX", txRepo.count());
+        OrderTransaction successTx = new OrderTransaction(
+            txId, orderId, mechanism, 0, processingTime, true
+        );
+        txRepo.add(successTx);
+
+        return success("Dat hang thanh cong! Ma don: " + orderId
+                      + " | " + quantity + " x " + product.getName()
+                      + " | Thoi gian xu ly: " + processingTime + "ms"
+                      + " | Co che: " + mechanism.name(), order);
     }
 
     // =====================================================================
@@ -229,6 +317,16 @@ public class OrderController extends BaseController {
      */
     private String generateId(String prefix, int currentCount) {
         return String.format("%s%05d", prefix, currentCount + 1);
+    }
+
+    public ControllerResult getOrdersByCustomerId(String customerId) {
+        List<Order> orders = orderRepo.findByCustomerId(customerId);
+        return success("Tim thay " + orders.size() + " don hang.", orders);
+    }
+
+    public ControllerResult getDetailsByOrderId(String orderId) {
+        List<OrderDetail> details = detailRepo.findByOrderId(orderId);
+        return success("Tim thay " + details.size() + " chi tiet don hang.", details);
     }
 
     // =====================================================================

@@ -97,17 +97,26 @@ public class DataGenerator {
         List<String> ids = new ArrayList<>();
         CustTier[] tiers = CustTier.values();
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "customers.csv"))) {
-            bw.write("id,name,email,password,status,tier");
+            bw.write("id,name,email,password,status,tier,address");
             bw.newLine();
             
-            Customer mainCust = new Customer("C00001", "Truong Gia Huy", "truonggiahuy@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD);
+            Customer mainCust = new Customer("C00001", "Truong Gia Huy", "truonggiahuy@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD, "123 Duong ABC, Quan 1, TP.HCM");
             ids.add(mainCust.getId());
             bw.write(mainCust.toCsvLine());
             bw.newLine();
 
+            String[] streets = {"Le Loi", "Nguyen Hue", "Tran Hung Dao", "Vo Van Kiet", "Hai Ba Trung", "Dien Bien Phu", "Pasteur", "Ly Tu Trong"};
+            String[] districts = {"Quan 1", "Quan 3", "Quan 5", "Quan 10", "Tan Binh", "Phu Nhuan", "Binh Thanh"};
+
             for (int i = 2; i <= count; i++) {
                 String name = generateName();
-                Customer customer = new Customer(String.format("C%05d", i), name, generateEmail(name), "pass123", RANDOM.nextDouble() > 0.1 ? AccountStatus.APPROVED : AccountStatus.BANNED, tiers[RANDOM.nextInt(tiers.length)]);
+                String address = "";
+                // 80% có địa chỉ, 20% bỏ trống
+                if (RANDOM.nextDouble() > 0.2) {
+                    address = (RANDOM.nextInt(999) + 1) + " " + streets[RANDOM.nextInt(streets.length)] + ", " + districts[RANDOM.nextInt(districts.length)] + ", TP.HCM";
+                }
+                
+                Customer customer = new Customer(String.format("C%05d", i), name, generateEmail(name), "pass123", RANDOM.nextDouble() > 0.1 ? AccountStatus.APPROVED : AccountStatus.BANNED, tiers[RANDOM.nextInt(tiers.length)], address);
                 ids.add(customer.getId());
                 bw.write(customer.toCsvLine());
                 bw.newLine();
