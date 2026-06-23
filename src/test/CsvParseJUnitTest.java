@@ -21,7 +21,7 @@ public class CsvParseJUnitTest {
 
     @Test
     public void testCustomerCsvRoundTrip() {
-        Customer c = new Customer("C01", "Nguyen Van A", "a@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD);
+        Customer c = new Customer("C01", "Nguyen Van A", "a@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD, "");
         String csv = c.toCsvLine();
 
         Customer parsed = new Customer();
@@ -37,7 +37,7 @@ public class CsvParseJUnitTest {
 
     @Test
     public void testCustomerCsvWithCommaInName() {
-        Customer c = new Customer("C02", "Nguyen Van A, VIP", "b@gmail.com", "pass456", AccountStatus.APPROVED, CustTier.SILVER);
+        Customer c = new Customer("C02", "Nguyen Van A, VIP", "b@gmail.com", "pass456", AccountStatus.APPROVED, CustTier.SILVER, "");
         String csv = c.toCsvLine();
 
         Customer parsed = new Customer();
@@ -50,7 +50,7 @@ public class CsvParseJUnitTest {
 
     @Test
     public void testCustomerBannedStatus() {
-        Customer c = new Customer("C03", "Test", "t@gmail.com", "pass", AccountStatus.BANNED, CustTier.BRONZE);
+        Customer c = new Customer("C03", "Test", "t@gmail.com", "pass", AccountStatus.BANNED, CustTier.BRONZE, "");
         String csv = c.toCsvLine();
 
         Customer parsed = new Customer();

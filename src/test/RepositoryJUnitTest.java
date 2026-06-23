@@ -101,7 +101,7 @@ public class RepositoryJUnitTest {
         int beforeCount = customerRepo.count();
 
         Customer newCust = new Customer("C99999", "Test User JUnit", "junit@test.com", "pass",
-                AccountStatus.APPROVED, CustTier.BRONZE);
+                AccountStatus.APPROVED, CustTier.BRONZE, "");
         customerRepo.add(newCust);
         assertEquals("Them 1 record => count tang 1", beforeCount + 1, customerRepo.count());
 
@@ -117,7 +117,7 @@ public class RepositoryJUnitTest {
     @Test(expected = IllegalArgumentException.class)
     public void testAddDuplicateId() {
         Customer dup = new Customer("C00001", "Dup", "dup@test.com", "pass",
-                AccountStatus.APPROVED, CustTier.BRONZE);
+                AccountStatus.APPROVED, CustTier.BRONZE, "");
         customerRepo.add(dup);
     }
 

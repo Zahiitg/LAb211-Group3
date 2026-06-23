@@ -56,7 +56,7 @@ public class CustomerControllerJUnitTest {
 
     @Test
     public void testRegisterSuccess() {
-        ControllerResult result = controller.register("Nguyen Van A", "nva@gmail.com", "mysecurepassword");
+        ControllerResult result = controller.register("Nguyen Van A", "nva@gmail.com", "mysecurepassword", "");
 
         // Kiem tra ket qua phai thanh cong
         assertTrue("Dang ky phai thanh cong", result.isSuccess());
@@ -85,11 +85,11 @@ public class CustomerControllerJUnitTest {
     @Test
     public void testRegisterDuplicateEmail() {
         // Dang ky lan dau → thanh cong
-        ControllerResult first = controller.register("User One", "dup@test.com", "pass1");
+        ControllerResult first = controller.register("User One", "dup@test.com", "pass1", "");
         assertTrue("Dang ky lan dau phai thanh cong", first.isSuccess());
 
         // Dang ky lan hai voi cung email → THAT BAI (khong throw Exception)
-        ControllerResult second = controller.register("User Two", "dup@test.com", "pass2");
+        ControllerResult second = controller.register("User Two", "dup@test.com", "pass2", "");
         assertFalse("Dang ky trung email phai THAT BAI", second.isSuccess());
         assertTrue("Thong bao loi phai chua tu 'da duoc dang ky'",
                    second.getMessage().contains("da duoc dang ky"));
@@ -97,7 +97,7 @@ public class CustomerControllerJUnitTest {
 
     @Test
     public void testRegisterEmptyName() {
-        ControllerResult result = controller.register("", "email@test.com", "pass");
+        ControllerResult result = controller.register("", "email@test.com", "pass", "");
         assertFalse("Dang ky voi ten rong phai THAT BAI", result.isSuccess());
         assertTrue("Thong bao loi phai de cap den 'Ten'",
                    result.getMessage().toLowerCase().contains("ten"));
@@ -105,7 +105,7 @@ public class CustomerControllerJUnitTest {
 
     @Test
     public void testRegisterEmptyEmail() {
-        ControllerResult result = controller.register("Name", "   ", "pass");
+        ControllerResult result = controller.register("Name", "   ", "pass", "");
         assertFalse("Dang ky voi email rong phai THAT BAI", result.isSuccess());
         assertTrue("Thong bao loi phai de cap den 'Email'",
                    result.getMessage().toLowerCase().contains("email"));
@@ -113,7 +113,7 @@ public class CustomerControllerJUnitTest {
 
     @Test
     public void testRegisterEmptyPassword() {
-        ControllerResult result = controller.register("Name", "email@test.com", "");
+        ControllerResult result = controller.register("Name", "email@test.com", "", "");
         assertFalse("Dang ky voi mat khau rong phai THAT BAI", result.isSuccess());
         assertTrue("Thong bao loi phai de cap den 'Mat khau'",
                    result.getMessage().toLowerCase().contains("mat khau"));
@@ -121,13 +121,13 @@ public class CustomerControllerJUnitTest {
 
     @Test
     public void testRegisterNullInputs() {
-        ControllerResult r1 = controller.register(null, "a@b.com", "pass");
+        ControllerResult r1 = controller.register(null, "a@b.com", "pass", "");
         assertFalse("Dang ky voi name = null phai THAT BAI", r1.isSuccess());
 
-        ControllerResult r2 = controller.register("Name", null, "pass");
+        ControllerResult r2 = controller.register("Name", null, "pass", "");
         assertFalse("Dang ky voi email = null phai THAT BAI", r2.isSuccess());
 
-        ControllerResult r3 = controller.register("Name", "a@b.com", null);
+        ControllerResult r3 = controller.register("Name", "a@b.com", null, "");
         assertFalse("Dang ky voi password = null phai THAT BAI", r3.isSuccess());
     }
 
@@ -138,7 +138,7 @@ public class CustomerControllerJUnitTest {
     @Test
     public void testLoginSuccess() {
         // Dang ky truoc
-        controller.register("Huy", "huy@gmail.com", "pass123");
+        controller.register("Huy", "huy@gmail.com", "pass123", "");
 
         // Dang nhap
         ControllerResult result = controller.login("huy@gmail.com", "pass123");
@@ -153,7 +153,7 @@ public class CustomerControllerJUnitTest {
     @Test
     public void testLoginSetsAuthenticationState() {
         // Dang ky truoc
-        controller.register("Huy Auth", "huyauth@gmail.com", "pass123");
+        controller.register("Huy Auth", "huyauth@gmail.com", "pass123", "");
 
         // Dam bao chua dang nhap
         assertFalse("Truoc khi login, AuthState phai rong",
@@ -178,7 +178,7 @@ public class CustomerControllerJUnitTest {
 
     @Test
     public void testLoginWrongPassword() {
-        controller.register("Huy", "huy@gmail.com", "pass123");
+        controller.register("Huy", "huy@gmail.com", "pass123", "");
 
         ControllerResult result = controller.login("huy@gmail.com", "wrongpass");
         assertFalse("Dang nhap sai mat khau phai THAT BAI", result.isSuccess());
@@ -194,7 +194,7 @@ public class CustomerControllerJUnitTest {
     @Test
     public void testLoginBannedUser() {
         // Dang ky user
-        ControllerResult regResult = controller.register("Banned User", "banned@test.com", "pass123");
+        ControllerResult regResult = controller.register("Banned User", "banned@test.com", "pass123", "");
         Customer c = (Customer) regResult.getData();
 
         // Admin khoa tai khoan

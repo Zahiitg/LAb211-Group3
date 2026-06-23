@@ -10,13 +10,14 @@ import repository.CustomerRepository;
  *
  * Chuc nang:
  * 1. register(name, email, password) → Dang ky tai khoan moi
- * 2. login(email, password)          → Dang nhap va luu phien vao AuthenticationState
+ * 2. login(email, password) → Dang nhap va luu phien vao AuthenticationState
  *
  * Tat ca ham deu tra ve ControllerResult de tang View xu ly nhat quan,
  * KHONG BAO GIO quang Exception ra ngoai hoac tra ve null.
  *
  * @author Thanh vien 2 - Customer Logic
- * @refactored-by Thanh vien 1 - Core Architecture (ap dung chuan BaseController)
+ * @refactored-by Thanh vien 1 - Core Architecture (ap dung chuan
+ *                BaseController)
  */
 public class CustomerController extends BaseController {
 
@@ -35,6 +36,7 @@ public class CustomerController extends BaseController {
 
     /**
      * Constructor cho testing hoac duong dan tuy chinh.
+     * 
      * @param filePath Duong dan den file CSV customers
      */
     public CustomerController(String filePath) {
@@ -89,25 +91,25 @@ public class CustomerController extends BaseController {
                     if (num > maxNum) {
                         maxNum = num;
                     }
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
         String newId = String.format("C%05d", maxNum + 1);
 
         // --- TAO VA LUU CUSTOMER MOI ---
         Customer newCust = new Customer(
-            newId,
-            name.trim(),
-            email.trim(),
-            password,
-            AccountStatus.APPROVED,
-            CustTier.BRONZE,
-            address != null ? address.trim() : ""
-        );
+                newId,
+                name.trim(),
+                email.trim(),
+                password,
+                AccountStatus.APPROVED,
+                CustTier.BRONZE,
+                address != null ? address.trim() : "");
         customerRepo.add(newCust);
 
         return success("Dang ky thanh cong! Chao mung " + newCust.getName()
-                       + " (Ma KH: " + newId + ")", newCust);
+                + " (Ma KH: " + newId + ")", newCust);
     }
 
     // =====================================================================
@@ -151,14 +153,15 @@ public class CustomerController extends BaseController {
         // --- KIEM TRA TRANG THAI TAI KHOAN ---
         if (c.getStatus() == AccountStatus.BANNED) {
             return error("Tai khoan cua ban da bi khoa (BANNED). "
-                        + "Vui long lien he Admin de duoc ho tro!");
+                    + "Vui long lien he Admin de duoc ho tro!");
         }
 
         // --- LUU PHIEN DANG NHAP ---
         // Su dung AuthenticationState (Singleton) cua he thong
         // Luu y: authState duoc ke thua tu BaseController
         // Tuy nhien vi AuthenticationState co ham login() rieng,
-        // o day ta chi set currentUser thong qua phuong thuc login cua AuthenticationState
+        // o day ta chi set currentUser thong qua phuong thuc login cua
+        // AuthenticationState
         // De tranh goi chong cheo, ta su dung truc tiep:
         AuthenticationState.getInstance().loginDirect(c);
 
@@ -166,7 +169,7 @@ public class CustomerController extends BaseController {
         String statusNote = "";
         if (c.getStatus() == AccountStatus.PENDING) {
             statusNote = " (Luu y: Tai khoan dang cho duyet, "
-                       + "mot so chuc nang co the bi han che)";
+                    + "mot so chuc nang co the bi han che)";
         }
 
         return success("Dang nhap thanh cong! Xin chao " + c.getName() + statusNote, c);
@@ -180,7 +183,8 @@ public class CustomerController extends BaseController {
      * Cap nhat ho so cua Customer (hien tai chi ho tro dia chi).
      */
     public ControllerResult updateProfile(Customer c, String newAddress) {
-        if (c == null) return error("Khong tim thay thong tin khach hang.");
+        if (c == null)
+            return error("Khong tim thay thong tin khach hang.");
         c.setAddress(newAddress);
         customerRepo.update(c);
         return success("Cap nhat ho so thanh cong!", c);
@@ -192,6 +196,7 @@ public class CustomerController extends BaseController {
 
     /**
      * Lay CustomerRepository (dung cho Admin hoac Unit Test).
+     * 
      * @return CustomerRepository
      */
     public CustomerRepository getCustomerRepo() {
