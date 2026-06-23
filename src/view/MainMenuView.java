@@ -27,7 +27,7 @@ public class MainMenuView {
         while (running) {
             ConsoleUI.printHeader("FLASH SALE MANAGEMENT SYSTEM");
             System.out.println("1. Dang nhap");
-            System.out.println("2. Dang ky (Chua ho tro)");
+            System.out.println("2. Dang ky");
             System.out.println("0. Thoat chuong trinh");
             System.out.println("----------------------------------------");
 

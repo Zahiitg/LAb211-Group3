@@ -17,8 +17,21 @@ public class DataGenerator {
     private static final String[] LAST_NAMES = {"Nguyen", "Tran", "Le", "Pham", "Hoang", "Huynh", "Phan", "Vu", "Vo", "Dang", "Bui", "Do", "Ho", "Ngo", "Duong", "Ly", "Truong"};
     private static final String[] MIDDLE_NAMES = {"Van", "Thi", "Ngoc", "Gia", "Thanh", "Minh", "Hai", "Tuan", "Duc", "Hoang", "Xuan", "Thu", "Hong", "Mai", "Quynh"};
     private static final String[] FIRST_NAMES = {"Huy", "An", "Anh", "Binh", "Cuong", "Dung", "Duong", "Dat", "Ha", "Hung", "Khanh", "Khoa", "Kien", "Lam", "Linh", "Long", "Nam", "Nghia", "Nhi", "Nhung", "Phuc", "Phuong", "Quan", "Quang", "Quoc", "Tam", "Thao", "Thang", "Thanh", "Thuy", "Trang", "Trung", "Tu", "Tuan", "Uyen", "Van", "Viet", "Vy", "Yen"};
-    private static final String[] PROD_PREFIXES = {"Garmin Forerunner", "Lenovo ThinkPad X1", "Razer Blade 16", "Adidas Ultraboost", "Samsung Galaxy Tab S9", "Sony A7 IV", "Samsung Galaxy S25", "Apple iPhone 16", "MacBook Pro M3", "Dell XPS 15", "Asus ROG Zephyrus", "Nike Air Max", "Sony WH-1000XM6"};
-    private static final String[] PROD_SUFFIXES = {"2023 Edition", "2024 Edition", "2025 Edition", "2026 Edition", "Pro", "Ultra", "Max", "Plus", "Standard"};
+    // === TEN SAN PHAM THEO TUNG DANH MUC ===
+    private static final Map<String, String[]> CATEGORY_PREFIXES = new LinkedHashMap<String, String[]>() {{
+        put("Electronics", new String[]{"Samsung Galaxy S25", "Apple iPhone 16", "MacBook Pro M3", "Dell XPS 15", "Asus ROG Zephyrus", "Lenovo ThinkPad X1", "Razer Blade 16", "Sony WH-1000XM6", "Samsung Galaxy Tab S9", "Sony A7 IV", "Garmin Forerunner", "JBL Charge 5", "Logitech MX Master", "iPad Air M2", "Google Pixel 9"});
+        put("Fashion", new String[]{"Ao Thun Cotton", "Quan Jean Slim", "Ao Khoac Bomber", "Dam Maxi Hoa", "Ao So Mi Trang", "Quan Tay Classic", "Ao Hoodie Unisex", "Chan Vay Xep Ly", "Ao Polo Ralph", "Quan Short Kaki", "Ao Vest Nam", "Dam Lien Cong So", "Ao Len Cashmere", "Quan Jogger", "Ao Cardigan"});
+        put("Home", new String[]{"Tu Lanh Inverter", "May Giat Cua Truoc", "Noi Chien Khong Dau", "May Hut Bui Robot", "Dieu Hoa 2 Chieu", "Lo Vi Song", "May Loc Nuoc RO", "Quat Tran Panasonic", "Ban La Hoi Nuoc", "May Xay Sinh To", "Noi Com Dien Tu", "Den LED Thong Minh", "May Rua Chen", "Binh Nuoc Nong", "May Say Toc"});
+        put("Beauty", new String[]{"Son MAC Ruby Woo", "Kem Chong Nang Anessa", "Serum Vitamin C", "Nuoc Hoa Chanel", "Kem Duong Am", "Phan Phu Innisfree", "Tay Trang Bioderma", "Mat Na Collagen", "Sua Rua Mat CeraVe", "Dau Goi Kerastase", "Mascara Maybelline", "Kem Nen Estee Lauder", "Toner AHA BHA", "Kem Mat SK-II", "Tinh Chat Retinol"});
+        put("Sports", new String[]{"Giay Nike Air Max", "Giay Adidas Ultraboost", "Vot Cau Long Yonex", "Bong Da Molten", "Ao Tap Gym", "Giay Chay Asics", "Gang Tay Boxing", "Day Nhay Speed Rope", "Xa Don Treo Tuong", "Tham Yoga TPE", "Kinh Boi Arena", "Mu Bao Hiem Poc", "Dong Ho Garmin", "Binh Nuoc GIGsport", "Ba Lo Leo Nui"});
+    }};
+    private static final Map<String, String[]> CATEGORY_SUFFIXES = new LinkedHashMap<String, String[]>() {{
+        put("Electronics", new String[]{"Pro", "Ultra", "Max", "Plus", "Standard", "2024 Edition", "2025 Edition", "2026 Edition", "Lite", "SE"});
+        put("Fashion", new String[]{"Size S", "Size M", "Size L", "Size XL", "Form Rong", "Form Slim", "Unisex", "Limited", "Premium", "Basic"});
+        put("Home", new String[]{"9kg", "12kg", "1.5L", "2.0L", "Smart", "Mini", "Gia Dinh", "Cao Cap", "Tiet Kiem Dien", "Inverter"});
+        put("Beauty", new String[]{"30ml", "50ml", "100ml", "200ml", "SPF50+", "Travel Size", "Full Size", "Limited Edition", "Set 3 Mon", "Gift Box"});
+        put("Sports", new String[]{"Size 39", "Size 41", "Size 43", "Pro", "Elite", "V2", "V3", "Competition", "Training", "Outdoor"});
+    }};
 
     private static String generateName() {
         return LAST_NAMES[RANDOM.nextInt(LAST_NAMES.length)] + " " +
@@ -133,9 +146,14 @@ public class DataGenerator {
             bw.newLine();
             for (int i = 1; i <= count; i++) {
                 String sellerId = sellerIds.get(RANDOM.nextInt(sellerIds.size()));
+                // Chon category ngau nhien
+                String category = categories[RANDOM.nextInt(categories.length)];
+                // Lay ten san pham PHU HOP voi category
+                String[] prefixes = CATEGORY_PREFIXES.get(category);
+                String[] suffixes = CATEGORY_SUFFIXES.get(category);
+                String prodName = prefixes[RANDOM.nextInt(prefixes.length)] + " " + suffixes[RANDOM.nextInt(suffixes.length)];
                 double generatedPrice = (RANDOM.nextInt(10000) + 50) * 1000.0;
-                String prodName = PROD_PREFIXES[RANDOM.nextInt(PROD_PREFIXES.length)] + " " + PROD_SUFFIXES[RANDOM.nextInt(PROD_SUFFIXES.length)];
-                Product product = new Product(String.format("P%05d", i), sellerId, prodName, categories[RANDOM.nextInt(categories.length)], generatedPrice, RANDOM.nextInt(500) + 10);
+                Product product = new Product(String.format("P%05d", i), sellerId, prodName, category, generatedPrice, RANDOM.nextInt(500) + 10);
                 ids.add(product.getId());
                 bw.write(product.toCsvLine());
                 bw.newLine();

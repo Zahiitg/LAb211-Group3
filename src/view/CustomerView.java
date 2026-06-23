@@ -225,29 +225,8 @@ public class CustomerView {
         int action = ConsoleUI.getInt("Chon (0-1): ", 0, 1);
         if (action == 0) return;
 
-        // Buoc 5: Nhap so luong va co che khoa
+        // Buoc 5: Nhap so luong
         int qty = ConsoleUI.getInt("Nhap so luong muon mua: ", 1, 1000);
-
-        System.out.println("Chon Co che Khoa:");
-        System.out.println("1. NO_LOCK       - Khong khoa (co the gay am kho)");
-        System.out.println("2. SYNCHRONIZED  - Khoa dong bo trong 1 JVM (an toan, nhanh)");
-        System.out.println("3. FILE_LOCK     - Khoa cap OS (an toan da tien trinh, cham)");
-        System.out.println("4. OPTIMISTIC_LOCK - Khoa lac quan, thu lai khi xung dot");
-        System.out.println("0. Huy dat hang");
-        int lockChoice = ConsoleUI.getInt("Chon co che (0-4): ", 0, 4);
-        if (lockChoice == 0) {
-            System.out.println("Da huy dat hang.");
-            return;
-        }
-
-        LockMechanism mechanism;
-        switch (lockChoice) {
-            case 1: mechanism = LockMechanism.NO_LOCK; break;
-            case 2: mechanism = LockMechanism.SYNCHRONIZED; break;
-            case 3: mechanism = LockMechanism.FILE_LOCK; break;
-            case 4: mechanism = LockMechanism.OPTIMISTIC_LOCK; break;
-            default: mechanism = LockMechanism.NO_LOCK;
-        }
 
         Customer c = (Customer) authState.getCurrentUser();
         
@@ -259,23 +238,9 @@ public class CustomerView {
             return;
         }
 
-        ControllerResult orderResult;
-        switch (mechanism) {
-            case NO_LOCK:
-                orderResult = orderController.placeOrderSingleThread(c.getId(), chosenItem.getId(), qty);
-                break;
-            case SYNCHRONIZED:
-                orderResult = orderController.placeOrderWithSynchronized(c.getId(), chosenItem.getId(), qty);
-                break;
-            case FILE_LOCK:
-                orderResult = orderController.placeOrderWithFileLock(c.getId(), chosenItem.getId(), qty);
-                break;
-            case OPTIMISTIC_LOCK:
-                orderResult = orderController.placeOrderWithOptimisticLock(c.getId(), chosenItem.getId(), qty);
-                break;
-            default:
-                orderResult = ControllerResult.error("Co che khoa khong hop le!");
-        }
+        // Su dung OPTIMISTIC_LOCK mac dinh (an toan nhat cho Flash Sale)
+        ControllerResult orderResult = orderController.placeOrderWithOptimisticLock(
+                c.getId(), chosenItem.getId(), qty);
 
         if (orderResult.isSuccess()) {
             ConsoleUI.printSuccess(orderResult.getMessage());
@@ -401,38 +366,18 @@ public class CustomerView {
 
         int qty = ConsoleUI.getInt("Nhap so luong muon mua: ", 1, product.getStock());
 
-        System.out.println("Chon Co che Khoa:");
-        System.out.println("1. NO_LOCK       - Khong khoa (co the gay am kho)");
-        System.out.println("2. SYNCHRONIZED  - Khoa dong bo trong 1 JVM (an toan, nhanh)");
-        System.out.println("3. FILE_LOCK     - Khoa cap OS (an toan da tien trinh, cham)");
-        System.out.println("4. OPTIMISTIC_LOCK - Khoa lac quan, thu lai khi xung dot");
-        System.out.println("0. Huy dat hang");
-        int lockChoice = ConsoleUI.getInt("Chon co che (0-4): ", 0, 4);
-        if (lockChoice == 0) {
-            System.out.println("Da huy dat hang.");
-            return;
-        }
-
-        LockMechanism mechanism;
-        switch (lockChoice) {
-            case 1: mechanism = LockMechanism.NO_LOCK; break;
-            case 2: mechanism = LockMechanism.SYNCHRONIZED; break;
-            case 3: mechanism = LockMechanism.FILE_LOCK; break;
-            case 4: mechanism = LockMechanism.OPTIMISTIC_LOCK; break;
-            default: mechanism = LockMechanism.NO_LOCK;
-        }
-
         Customer c = (Customer) authState.getCurrentUser();
         
-        // Buoc 6: Xac nhan don hang
+        // Xac nhan don hang
         boolean confirm = showOrderConfirmation(c, product.getName(), qty, product.getPrice());
         if (!confirm) {
             System.out.println("Da huy dat hang.");
             return;
         }
 
+        // Su dung OPTIMISTIC_LOCK mac dinh (an toan, chong xung dot)
         ControllerResult orderResult = orderController.placeProductOrder(
-                c.getId(), product.getId(), qty, mechanism);
+                c.getId(), product.getId(), qty, LockMechanism.OPTIMISTIC_LOCK);
 
         if (orderResult.isSuccess()) {
             ConsoleUI.printSuccess(orderResult.getMessage());
