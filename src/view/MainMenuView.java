@@ -28,10 +28,11 @@ public class MainMenuView {
             ConsoleUI.printHeader("FLASH SALE MANAGEMENT SYSTEM");
             System.out.println("1. Dang nhap");
             System.out.println("2. Dang ky");
+            System.out.println("3. Tiep tuc voi vai tro Khach (Guest)");
             System.out.println("0. Thoat chuong trinh");
             System.out.println("----------------------------------------");
 
-            int choice = ConsoleUI.getInt("Chon chuc nang (0-2): ", 0, 2);
+            int choice = ConsoleUI.getInt("Chon chuc nang (0-3): ", 0, 3);
 
             switch (choice) {
                 case 1:
@@ -39,6 +40,9 @@ public class MainMenuView {
                     break;
                 case 2:
                     handleRegister();
+                    break;
+                case 3:
+                    handleGuestMode();
                     break;
                 case 0:
                     ConsoleUI.printSuccess("Cam on ban da su dung phan mem. Tam biet!");
@@ -104,5 +108,23 @@ public class MainMenuView {
             ConsoleUI.printError(result.getMessage());
         }
         ConsoleUI.pause();
+    }
+
+    /**
+     * Xu ly dang nhap voi vai tro Khach (Guest).
+     * Khong can dang nhap, chi can bam Enter de tien hanh.
+     */
+    private void handleGuestMode() {
+        ConsoleUI.printHeader("SHOPEE XIN CHAO!");
+        System.out.println("Ban dang vao he thong voi vai tro KHACH (Guest).");
+        System.out.println("- De mua hang, vui long dang ky tai khoan.");
+        System.out.println("----------------------------------------");
+
+        authState.loginAsGuest();
+        ConsoleUI.printSuccess("Chao mung ban! Ban dang xem voi tu cach Khach.");
+        ConsoleUI.pause();
+
+        GuestView guestView = new GuestView();
+        guestView.start();
     }
 }

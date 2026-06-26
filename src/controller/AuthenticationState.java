@@ -2,6 +2,7 @@ package controller;
 
 import model.Admin;
 import model.Customer;
+import model.Guest;
 import model.Seller;
 import model.User;
 import model.enums.AccountStatus;
@@ -297,6 +298,24 @@ public class AuthenticationState {
      */
     public boolean isSeller() {
         return currentUser instanceof Seller;
+    }
+
+    /**
+     * Kiem tra nguoi dang nhap co phai Guest khong.
+     * @return true neu dang nhap va la Guest
+     */
+    public boolean isGuest() {
+        return currentUser instanceof Guest;
+    }
+
+    /**
+     * Dang nhap nhanh voi vai tro Guest (Khach).
+     * Tao mot doi tuong Guest va luu vao phien.
+     */
+    public void loginAsGuest() {
+        if (currentUser != null) return; // Neu da dang nhap roi thi bo qua
+        Guest guest = new Guest(java.util.UUID.randomUUID().toString().substring(0, 8));
+        this.currentUser = guest;
     }
 
     // =====================================================================

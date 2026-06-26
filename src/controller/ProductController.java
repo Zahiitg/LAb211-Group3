@@ -51,6 +51,11 @@ public class ProductController extends BaseController {
         return success("Lấy chi tiết sản phẩm thành công.", p);
     }
 
+    public Product getProductById(String productId) {
+        if (productId == null || productId.trim().isEmpty()) return null;
+        return productRepo.getById(productId.trim());
+    }
+
     public ProductRepository getProductRepo() {
         return productRepo;
     }
