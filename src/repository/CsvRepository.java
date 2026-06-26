@@ -71,11 +71,13 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
 
     @Override
     public List<T> getAll() {
+        reload(); // Dong bo hoa cache voi file de thay duoc thay doi tu role khac
         return new ArrayList<>(cache.values());
     }
 
     @Override
     public T getById(String id) {
+        reload(); // Dong bo hoa de lay ban ghi moi nhat
         return cache.get(id);
     }
 
@@ -126,6 +128,7 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
      * @return Danh sach Entity thoa man dieu kien
      */
     public List<T> findBy(java.util.function.Predicate<T> predicate) {
+        reload(); // Dong bo file de lay cap nhat tu tien trinh/terminal khac
         List<T> results = new ArrayList<>();
         for (T entity : cache.values()) {
             if (predicate.test(entity)) {

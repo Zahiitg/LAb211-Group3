@@ -101,13 +101,14 @@ public class RepositoryJUnitTest {
         int beforeCount = customerRepo.count();
 
         Customer newCust = new Customer("C99999", "Test User JUnit", "junit@test.com", "pass",
-                AccountStatus.APPROVED, CustTier.BRONZE, "");
+                AccountStatus.APPROVED, CustTier.BRONZE, "123 Main St");
         customerRepo.add(newCust);
         assertEquals("Them 1 record => count tang 1", beforeCount + 1, customerRepo.count());
 
         Customer fetched = customerRepo.getById("C99999");
         assertNotNull("Phai tim thay Customer vua them", fetched);
         assertEquals("Test User JUnit", fetched.getName());
+        assertEquals("123 Main St", fetched.getAddress());
 
         boolean deleted = customerRepo.delete("C99999");
         assertTrue("Xoa phai thanh cong", deleted);

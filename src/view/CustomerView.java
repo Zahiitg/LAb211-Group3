@@ -12,6 +12,8 @@ import model.Product;
 import model.Order;
 import model.OrderDetail;
 import model.enums.LockMechanism;
+import model.enums.SaleStatus;
+import java.util.stream.Collectors;
 
 import java.util.List;
 
@@ -49,10 +51,11 @@ public class CustomerView {
             System.out.println("3. Xem san pham theo danh muc");
             System.out.println("4. Xem danh sach va Dat mua Flash Sale");
             System.out.println("5. Xem lich su don hang");
+            System.out.println("6. Gio hang cua toi");
             System.out.println("0. Dang xuat");
             System.out.println("----------------------------------------");
 
-            int choice = ConsoleUI.getInt("Chon chuc nang (0-5): ", 0, 5);
+            int choice = ConsoleUI.getInt("Chon chuc nang (0-6): ", 0, 6);
 
             switch (choice) {
                 case 1:
@@ -69,6 +72,9 @@ public class CustomerView {
                     break;
                 case 5:
                     showOrderHistory();
+                    break;
+                case 6:
+                    manageCart();
                     break;
                 case 0:
                     logout();
@@ -101,19 +107,20 @@ public class CustomerView {
                 }
                 
                 System.out.println("----------------------------------------");
-                System.out.println("1. Cap nhat dia chi giao hang");
+                System.out.println("1. Cap nhat ho so (Ten, Mat khau, Dia chi)");
                 System.out.println("0. Quay lai menu chinh");
                 
                 int choice = ConsoleUI.getInt("Chon (0-1): ", 0, 1);
                 if (choice == 1) {
-                    String newAddr = ConsoleUI.getString("Nhap dia chi moi (de trong de huy): ");
-                    if (!newAddr.isEmpty()) {
-                        ControllerResult res = customerController.updateProfile(c, newAddr);
-                        if (res.isSuccess()) {
-                            ConsoleUI.printSuccess(res.getMessage());
-                        } else {
-                            ConsoleUI.printError(res.getMessage());
-                        }
+                    String newName = ConsoleUI.getString("Nhap Ten hien thi moi (Enter de bo qua): ");
+                    String newPass = ConsoleUI.getString("Nhap Mat khau moi (Enter de bo qua): ");
+                    String newAddr = ConsoleUI.getString("Nhap Dia chi GH moi (Enter de bo qua): ");
+                    
+                    ControllerResult res = customerController.updateProfile(newName, newPass, newAddr);
+                    if (res.isSuccess()) {
+                        ConsoleUI.printSuccess(res.getMessage());
+                    } else {
+                        ConsoleUI.printError(res.getMessage());
                     }
                 } else {
                     break;
@@ -155,9 +162,13 @@ public class CustomerView {
         }
 
         @SuppressWarnings("unchecked")
-        List<FlashSaleEvent> events = (List<FlashSaleEvent>) eventsResult.getData();
+        List<FlashSaleEvent> allEvents = (List<FlashSaleEvent>) eventsResult.getData();
+        List<FlashSaleEvent> events = allEvents.stream()
+                .filter(e -> e.getStatus() == SaleStatus.ONGOING)
+                .collect(Collectors.toList());
+
         if (events.isEmpty()) {
-            ConsoleUI.printError("Hien tai chua co su kien Flash Sale nao!");
+            ConsoleUI.printError("Hien tai chua co su kien Flash Sale nao dang dien ra!");
             return;
         }
 
@@ -192,18 +203,24 @@ public class CustomerView {
         }
 
         ConsoleUI.printHeader("SAN PHAM TRONG SU KIEN: " + chosenEvent.getName());
-        System.out.printf("%-5s | %-10s | %-25s | %-12s | %-8s\n",
-                "STT", "Item ID", "Ten San Pham", "Gia Sale", "Con Lai");
-        System.out.println("----------------------------------------------------------------------");
+        System.out.printf("%-5s | %-10s | %-25s | %-10s | %-6s | %-10s | %-8s\n",
+                "STT", "Item ID", "Ten San Pham", "Gia Goc", "Giam", "Gia Sale", "Con Lai");
+        System.out.println("-----------------------------------------------------------------------------------------");
         for (int i = 0; i < items.size(); i++) {
             FlashSaleItem item = items.get(i);
             Product p = flashSaleController.getProductById(item.getProductId());
             String pName = (p != null) ? p.getName() : "Unknown Product";
             int stockLeft = item.getLimitedQty() - item.getSoldQty();
-            System.out.printf("%-5d | %-10s | %-25s | %-12.2f | %-8d\n",
-                    i + 1, item.getId(), pName, item.getSalePrice(), stockLeft);
+            
+            double originalPrice = (p != null) ? p.getPrice() : 0.0;
+            double salePrice = item.getSalePrice();
+            long percentOff = (originalPrice > 0) ? Math.round(((originalPrice - salePrice) / originalPrice) * 100) : 0;
+            String discountStr = "-" + percentOff + "%";
+            
+            System.out.printf("%-5d | %-10s | %-25s | %-10.0f | %-6s | %-10.0f | %-8d\n",
+                    i + 1, item.getId(), pName, originalPrice, discountStr, salePrice, stockLeft);
         }
-        System.out.println("----------------------------------------------------------------------");
+        System.out.println("-----------------------------------------------------------------------------------------");
 
         // Buoc 4: Nguoi dung chon san pham
         int itemChoice = ConsoleUI.getInt("Chon so thu tu san pham muon mua (0 de quay lai): ", 0, items.size());
@@ -212,14 +229,20 @@ public class CustomerView {
         FlashSaleItem chosenItem = items.get(itemChoice - 1);
         Product chosenProduct = flashSaleController.getProductById(chosenItem.getProductId());
 
+        double originalPrice = chosenProduct != null ? chosenProduct.getPrice() : 0.0;
+        double salePrice = chosenItem.getSalePrice();
+        long percentOff = (originalPrice > 0) ? Math.round(((originalPrice - salePrice) / originalPrice) * 100) : 0;
+
         // Hien thi chi tiet san pham duoc chon
         ConsoleUI.printHeader("CHI TIET SAN PHAM");
         System.out.println("Ten SP     : " + (chosenProduct != null ? chosenProduct.getName() : "Unknown"));
         System.out.println("Item ID    : " + chosenItem.getId());
-        System.out.printf("Gia Flash  : %.2f VND%n", chosenItem.getSalePrice());
+        System.out.printf("Gia Goc    : %.0f VND\n", originalPrice);
+        System.out.printf("Giam       : -%d%%\n", percentOff);
+        System.out.printf("Gia Flash  : %.0f VND\n", salePrice);
         System.out.println("Con lai    : " + (chosenItem.getLimitedQty() - chosenItem.getSoldQty()));
         System.out.println("----------------------------------------");
-        System.out.println("1. Mua san pham nay");
+        System.out.println("1. Them vao gio hang");
         System.out.println("0. Quay lai danh sach");
 
         int action = ConsoleUI.getInt("Chon (0-1): ", 0, 1);
@@ -228,25 +251,12 @@ public class CustomerView {
         // Buoc 5: Nhap so luong
         int qty = ConsoleUI.getInt("Nhap so luong muon mua: ", 1, 1000);
 
-        Customer c = (Customer) authState.getCurrentUser();
-        
-        // Buoc 6: Xac nhan don hang
-        String pName = (chosenProduct != null) ? chosenProduct.getName() : "Unknown Product";
-        boolean confirm = showOrderConfirmation(c, pName, qty, chosenItem.getSalePrice());
-        if (!confirm) {
-            System.out.println("Da huy dat hang.");
-            return;
-        }
+        ControllerResult cartResult = customerController.addToCart(chosenItem.getId(), qty);
 
-        // Su dung OPTIMISTIC_LOCK mac dinh (an toan nhat cho Flash Sale)
-        ControllerResult orderResult = orderController.placeOrderWithOptimisticLock(
-                c.getId(), chosenItem.getId(), qty);
-
-        if (orderResult.isSuccess()) {
-            ConsoleUI.printSuccess(orderResult.getMessage());
-            showPendingAlert();
+        if (cartResult.isSuccess()) {
+            ConsoleUI.printSuccess(cartResult.getMessage());
         } else {
-            ConsoleUI.printError(orderResult.getMessage());
+            ConsoleUI.printError(cartResult.getMessage());
         }
     }
 
@@ -353,7 +363,7 @@ public class CustomerView {
         System.out.printf( "Gia        : %.2f VND%n", product.getPrice());
         System.out.println("Ton kho    : " + product.getStock());
         System.out.println("----------------------------------------");
-        System.out.println("1. Mua san pham nay");
+        System.out.println("1. Them vao gio hang");
         System.out.println("0. Quay lai");
 
         int action = ConsoleUI.getInt("Chon (0-1): ", 0, 1);
@@ -366,24 +376,12 @@ public class CustomerView {
 
         int qty = ConsoleUI.getInt("Nhap so luong muon mua: ", 1, product.getStock());
 
-        Customer c = (Customer) authState.getCurrentUser();
-        
-        // Xac nhan don hang
-        boolean confirm = showOrderConfirmation(c, product.getName(), qty, product.getPrice());
-        if (!confirm) {
-            System.out.println("Da huy dat hang.");
-            return;
-        }
+        ControllerResult cartResult = customerController.addToCart(product.getId(), qty);
 
-        // Su dung OPTIMISTIC_LOCK mac dinh (an toan, chong xung dot)
-        ControllerResult orderResult = orderController.placeProductOrder(
-                c.getId(), product.getId(), qty, LockMechanism.OPTIMISTIC_LOCK);
-
-        if (orderResult.isSuccess()) {
-            ConsoleUI.printSuccess(orderResult.getMessage());
-            showPendingAlert();
+        if (cartResult.isSuccess()) {
+            ConsoleUI.printSuccess(cartResult.getMessage());
         } else {
-            ConsoleUI.printError(orderResult.getMessage());
+            ConsoleUI.printError(cartResult.getMessage());
         }
     }
 
@@ -420,6 +418,66 @@ public class CustomerView {
                 }
             }
             System.out.println("------------------------------------------------------------------");
+        }
+        
+        System.out.println("1. Huy don hang");
+        System.out.println("0. Quay lai");
+        int choice = ConsoleUI.getInt("Chon (0-1): ", 0, 1);
+        if (choice == 1) {
+            String orderId = ConsoleUI.getString("Nhap Ma Don Hang muon huy: ");
+            ControllerResult cancelRes = customerController.cancelOrder(orderId);
+            if (cancelRes.isSuccess()) {
+                ConsoleUI.printSuccess(cancelRes.getMessage());
+            } else {
+                ConsoleUI.printError(cancelRes.getMessage());
+            }
+        }
+    }
+
+    private void manageCart() {
+        while (true) {
+            ConsoleUI.printHeader("GIO HANG CUA TOI");
+            ControllerResult cartRes = customerController.viewCart();
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Integer> cart = (java.util.Map<String, Integer>) cartRes.getData();
+
+            if (cart.isEmpty()) {
+                System.out.println("Gio hang dang trong!");
+                System.out.println("----------------------------------------");
+                System.out.println("0. Quay lai");
+                ConsoleUI.getInt("Chon (0): ", 0, 0);
+                return;
+            }
+
+            System.out.printf("%-20s | %-10s\n", "Ma San Pham", "So Luong");
+            System.out.println("----------------------------------------");
+            for (java.util.Map.Entry<String, Integer> entry : cart.entrySet()) {
+                System.out.printf("%-20s | %-10d\n", entry.getKey(), entry.getValue());
+            }
+            System.out.println("----------------------------------------");
+            System.out.println("1. Thanh toan (Checkout)");
+            System.out.println("2. Xoa sach gio hang");
+            System.out.println("0. Quay lai");
+
+            int choice = ConsoleUI.getInt("Chon (0-2): ", 0, 2);
+            switch (choice) {
+                case 1:
+                    ControllerResult checkoutRes = customerController.checkoutCart();
+                    if (checkoutRes.isSuccess()) {
+                        ConsoleUI.printSuccess(checkoutRes.getMessage());
+                        showPendingAlert();
+                        return; // Thanh toan xong quay ve menu
+                    } else {
+                        ConsoleUI.printError(checkoutRes.getMessage());
+                    }
+                    break;
+                case 2:
+                    customerController.clearCart();
+                    ConsoleUI.printSuccess("Da xoa sach gio hang!");
+                    break;
+                case 0:
+                    return;
+            }
         }
     }
 

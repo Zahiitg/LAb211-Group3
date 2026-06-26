@@ -4,9 +4,28 @@ import java.util.List;
 
 import model.Customer;
 import model.Seller;
+import model.Order;
+import model.OrderDetail;
+import model.OrderTransaction;
+import model.FlashSaleEvent;
+import model.FlashSaleItem;
+import model.Product;
 import model.enums.AccountStatus;
+import model.enums.OrderStatus;
+import model.enums.SaleStatus;
 import repository.CustomerRepository;
 import repository.SellerRepository;
+import repository.OrderRepository;
+import repository.OrderDetailRepository;
+import repository.OrderTransactionRepository;
+import repository.FlashSaleItemRepository;
+import repository.ProductRepository;
+import repository.CategoryRepository;
+import repository.FlashSaleEventRepository;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 /**
  * Controller dành riêng cho Admin — Quản lý tài khoản người dùng.
@@ -25,10 +44,29 @@ public class AdminController extends BaseController {
 
     private final CustomerRepository customerRepo;
     private final SellerRepository sellerRepo;
+    private final OrderRepository orderRepo;
+    private final OrderDetailRepository detailRepo;
+    private final OrderTransactionRepository txRepo;
+    private final FlashSaleItemRepository flashSaleItemRepo;
+    private final ProductRepository productRepo;
+    private final FlashSaleController flashSaleController;
+    private final CategoryRepository categoryRepo;
+    private final FlashSaleEventRepository eventRepo;
+    private final repository.AdminRepository adminRepo;
 
     public AdminController() {
+        AuthenticationState authState = AuthenticationState.getInstance();
+        this.adminRepo = authState.getAdminRepo();
         this.customerRepo = authState.getCustomerRepo();
         this.sellerRepo = authState.getSellerRepo();
+        this.orderRepo = authState.getOrderRepo();
+        this.detailRepo = authState.getDetailRepo();
+        this.txRepo = authState.getTxRepo();
+        this.flashSaleItemRepo = authState.getFlashSaleItemRepo();
+        this.productRepo = authState.getProductRepo();
+        this.categoryRepo = authState.getCategoryRepo();
+        this.eventRepo = authState.getFlashSaleEventRepo();
+        this.flashSaleController = new FlashSaleController();
     }
 
     // =====================================================================
@@ -247,5 +285,325 @@ public class AdminController extends BaseController {
 
         return success("Da mo khoa tai khoan Seller: "
             + seller.getName() + " (" + sellerId + ")", seller);
+    }
+
+    // =====================================================================
+    // 1. QUAN LY DON HANG (ORDER MANAGEMENT)
+    // =====================================================================
+
+    public ControllerResult listAllOrders() {
+        requireAdmin();
+        List<Order> orders = orderRepo.getAll();
+        return success("Tim thay " + orders.size() + " don hang.", orders);
+    }
+
+    public ControllerResult listOrdersByStatus(OrderStatus status) {
+        requireAdmin();
+        if (status == null) {
+            return error("Trang thai khong duoc de trong!");
+        }
+        List<Order> filtered = orderRepo.getAll().stream()
+                .filter(o -> o.getStatus() == status)
+                .collect(Collectors.toList());
+        return success("Tim thay " + filtered.size() + " don hang trang thai " + status, filtered);
+    }
+
+    public ControllerResult verifyOrder(String orderId) {
+        requireAdmin();
+        if (orderId == null || orderId.trim().isEmpty()) return error("Order ID khong duoc de trong!");
+        
+        Order o = orderRepo.getById(orderId.trim());
+        if (o == null) return error("Khong tim thay don hang: " + orderId);
+        if (o.getStatus() != OrderStatus.PENDING) return error("Chi the xac nhan don hang o trang thai PENDING!");
+        
+        o.setStatus(OrderStatus.VERIFIED);
+        orderRepo.update(o);
+        return success("Da xac nhan don hang: " + orderId, o);
+    }
+
+    public ControllerResult completeOrder(String orderId) {
+        requireAdmin();
+        if (orderId == null || orderId.trim().isEmpty()) return error("Order ID khong duoc de trong!");
+        
+        Order o = orderRepo.getById(orderId.trim());
+        if (o == null) return error("Khong tim thay don hang: " + orderId);
+        if (o.getStatus() != OrderStatus.VERIFIED) return error("Chi co the hoan thanh don hang dang VERIFIED!");
+        
+        o.setStatus(OrderStatus.COMPLETED);
+        orderRepo.update(o);
+        return success("Da hoan thanh don hang: " + orderId, o);
+    }
+
+    public ControllerResult cancelOrder(String orderId) {
+        requireAdmin();
+        if (orderId == null || orderId.trim().isEmpty()) return error("Order ID khong duoc de trong!");
+        
+        Order o = orderRepo.getById(orderId.trim());
+        if (o == null) return error("Khong tim thay don hang: " + orderId);
+        if (o.getStatus() == OrderStatus.CANCELLED || o.getStatus() == OrderStatus.COMPLETED) {
+            return error("Khong the huy don hang da hoan thanh hoac da huy!");
+        }
+        
+        // HOAN KHO
+        List<OrderDetail> details = detailRepo.findByOrderId(o.getId());
+        for (OrderDetail detail : details) {
+            String itemId = detail.getFlashSaleItemId(); // dung cho ca SP thuong & FlashSale
+            int qty = detail.getQuantity();
+            
+            FlashSaleItem fsItem = flashSaleItemRepo.getById(itemId);
+            if (fsItem != null) {
+                // Hoan kho Flash Sale
+                fsItem.setSoldQty(fsItem.getSoldQty() - qty);
+                flashSaleItemRepo.update(fsItem);
+                
+                // Hoan kho Product thuong tuong ung
+                Product origP = productRepo.getById(fsItem.getProductId());
+                if (origP != null) {
+                    origP.setStock(origP.getStock() + qty);
+                    productRepo.update(origP);
+                }
+            } else {
+                Product p = productRepo.getById(itemId);
+                if (p != null) {
+                    // Hoan kho Product thuong
+                    p.setStock(p.getStock() + qty);
+                    productRepo.update(p);
+                }
+            }
+        }
+        
+        o.setStatus(OrderStatus.CANCELLED);
+        orderRepo.update(o);
+        return success("Da huy don hang va hoan kho: " + orderId, o);
+    }
+
+    public ControllerResult getDetailsByOrderId(String orderId) {
+        requireAdmin();
+        Order order = orderRepo.getById(orderId);
+        if (order == null) return error("Khong tim thay don hang!");
+        List<OrderDetail> details = detailRepo.findByOrderId(orderId);
+        return success("Chi tiet don hang", details);
+    }
+
+    // =====================================================================
+    // PHASE 1: TAO SU KIEN FLASH SALERD
+    // =====================================================================
+
+    // =====================================================================
+    // 2. THONG KE DASHBOARD
+    // =====================================================================
+
+    public ControllerResult getDashboardStats() {
+        requireAdmin();
+        
+        Map<String, Object> stats = new HashMap<>();
+        
+        List<Customer> customers = customerRepo.getAll();
+        stats.put("totalCustomers", customers.size());
+        stats.put("approvedCustomers", customers.stream().filter(c -> c.getStatus() == AccountStatus.APPROVED).count());
+        stats.put("bannedCustomers", customers.stream().filter(c -> c.getStatus() == AccountStatus.BANNED).count());
+        
+        stats.put("totalSellers", sellerRepo.getAll().size());
+        stats.put("totalProducts", productRepo.getAll().size());
+        
+        List<Order> orders = orderRepo.getAll();
+        stats.put("totalOrders", orders.size());
+        stats.put("pendingOrders", orders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count());
+        stats.put("verifiedOrders", orders.stream().filter(o -> o.getStatus() == OrderStatus.VERIFIED).count());
+        stats.put("completedOrders", orders.stream().filter(o -> o.getStatus() == OrderStatus.COMPLETED).count());
+        stats.put("cancelledOrders", orders.stream().filter(o -> o.getStatus() == OrderStatus.CANCELLED).count());
+        
+        double totalRevenue = 0.0;
+        List<OrderDetail> allDetails = detailRepo.getAll();
+        for (Order o : orders) {
+            if (o.getStatus() == OrderStatus.COMPLETED) {
+                for (OrderDetail d : allDetails) {
+                    if (d.getOrderId().equals(o.getId())) {
+                        totalRevenue += (d.getPriceAtPurchase() * d.getQuantity());
+                    }
+                }
+            }
+        }
+        stats.put("totalRevenue", totalRevenue);
+        
+        List<FlashSaleEvent> events = flashSaleController.getEventRepo().getAll();
+        stats.put("totalEvents", events.size());
+        stats.put("ongoingEvents", events.stream().filter(e -> e.getStatus() == SaleStatus.ONGOING).count());
+        
+        return success("Tai thong ke thanh cong", stats);
+    }
+
+    // =====================================================================
+    // 3. TIM KIEM TAI KHOAN
+    // =====================================================================
+
+    public ControllerResult searchCustomers(String keyword) {
+        requireAdmin();
+        if (keyword == null || keyword.trim().isEmpty()) return error("Tu khoa tim kiem khong duoc trong");
+        
+        String lowerKeyword = keyword.trim().toLowerCase();
+        List<Customer> results = customerRepo.getAll().stream()
+                .filter(c -> (c.getName() != null && c.getName().toLowerCase().contains(lowerKeyword)) ||
+                             (c.getEmail() != null && c.getEmail().toLowerCase().contains(lowerKeyword)))
+                .collect(Collectors.toList());
+        
+        return success("Tim thay " + results.size() + " Customer.", results);
+    }
+
+    public ControllerResult searchSellers(String keyword) {
+        requireAdmin();
+        if (keyword == null || keyword.trim().isEmpty()) return error("Tu khoa tim kiem khong duoc trong");
+        
+        String lowerKeyword = keyword.trim().toLowerCase();
+        List<Seller> results = sellerRepo.getAll().stream()
+                .filter(s -> (s.getName() != null && s.getName().toLowerCase().contains(lowerKeyword)) ||
+                             (s.getEmail() != null && s.getEmail().toLowerCase().contains(lowerKeyword)))
+                .collect(Collectors.toList());
+        
+        return success("Tim thay " + results.size() + " Seller.", results);
+    }
+
+    // =====================================================================
+    // 4. QUAN LY FLASH SALE
+    // =====================================================================
+
+    public ControllerResult listFlashSaleEvents() {
+        requireAdmin();
+        return flashSaleController.getAllEvents();
+    }
+
+    public ControllerResult startFlashSaleEvent(String eventId) {
+        requireAdmin();
+        return flashSaleController.startEvent(eventId);
+    }
+
+    public ControllerResult endFlashSaleEvent(String eventId) {
+        requireAdmin();
+        return flashSaleController.endEvent(eventId);
+    }
+
+    // =====================================================================
+    // PHASE 1: TAO SU KIEN FLASH SALE
+    // =====================================================================
+    public ControllerResult createFlashSaleEvent(String name, int durationDays) {
+        requireAdmin();
+        return flashSaleController.createEvent(name, durationDays);
+    }
+
+    // =====================================================================
+    // PHASE 3: QUAN LY DANH MUC
+    // =====================================================================
+    public ControllerResult listAllCategories() {
+        requireAdmin();
+        List<model.Category> categories = categoryRepo.getAll();
+        
+        // Auto-seed from products if empty
+        if (categories.isEmpty()) {
+            List<String> productCats = productRepo.getAllCategories();
+            int idCounter = 1;
+            for (String cat : productCats) {
+                model.Category c = new model.Category(String.format("CAT%03d", idCounter++), cat);
+                categoryRepo.add(c);
+                categories.add(c);
+            }
+        }
+        
+        if (categories.isEmpty()) return error("Khong co danh muc nao.");
+        return success("Danh sach danh muc", categories);
+    }
+
+    public ControllerResult addCategory(String name) {
+        requireAdmin();
+        if (name == null || name.trim().isEmpty()) return error("Ten danh muc khong de trong!");
+        int maxNum = 0;
+        for (model.Category c : categoryRepo.getAll()) {
+            if (c.getId() != null && c.getId().startsWith("CAT")) {
+                try {
+                    int num = Integer.parseInt(c.getId().substring(3));
+                    if (num > maxNum) maxNum = num;
+                } catch (Exception e) {}
+            }
+        }
+        model.Category newCat = new model.Category(String.format("CAT%03d", maxNum + 1), name.trim());
+        categoryRepo.add(newCat);
+        return success("Them danh muc thanh cong: " + newCat.getName(), newCat);
+    }
+
+    public ControllerResult deleteCategory(String id) {
+        requireAdmin();
+        model.Category c = categoryRepo.getById(id);
+        if (c == null) return error("Khong tim thay danh muc!");
+        categoryRepo.delete(id);
+        return success("Da xoa danh muc: " + c.getName(), c);
+    }
+
+    // =====================================================================
+    // PHASE 4: CAP NHAT PROFILE ADMIN
+    // =====================================================================
+    public ControllerResult updateProfile(String newName, String newPassword) {
+        requireAdmin();
+        model.Admin me = (model.Admin) authState.getCurrentUser();
+        if (newName != null && !newName.trim().isEmpty()) {
+            me.setName(newName.trim());
+        }
+        if (newPassword != null && !newPassword.trim().isEmpty()) {
+            if (newPassword.trim().length() < 6) return error("Mat khau moi phai tu 6 ky tu tro len!");
+            me.setPassword(newPassword.trim());
+        }
+        adminRepo.update(me);
+        return success("Cap nhat ho so thanh cong!", me);
+    }
+
+    // =====================================================================
+    // 5. QUAN LY SAN PHAM
+    // =====================================================================
+
+    public ControllerResult listAllProducts() {
+        requireAdmin();
+        List<Product> products = productRepo.getAll();
+        return success("Tim thay " + products.size() + " san pham.", products);
+    }
+
+    public ControllerResult searchProducts(String keyword) {
+        requireAdmin();
+        if (keyword == null || keyword.trim().isEmpty()) return error("Tu khoa khong duoc trong");
+        List<Product> products = productRepo.findByName(keyword);
+        return success("Tim thay " + products.size() + " san pham.", products);
+    }
+
+    public ControllerResult getProductsByCategory(String category) {
+        requireAdmin();
+        if (category == null || category.trim().isEmpty()) return error("Danh muc khong duoc trong");
+        List<Product> products = productRepo.findByCategory(category);
+        return success("Tim thay " + products.size() + " san pham.", products);
+    }
+
+    public ControllerResult deleteProduct(String productId) {
+        requireAdmin();
+        if (productId == null || productId.trim().isEmpty()) return error("Ma san pham khong duoc trong");
+        
+        Product p = productRepo.getById(productId.trim());
+        if (p == null) return error("Khong tim thay san pham: " + productId);
+        
+        productRepo.delete(productId.trim());
+        return success("Da xoa san pham: " + productId, p);
+    }
+
+    // =====================================================================
+    // 6. XEM LOG GIAO DICH
+    // =====================================================================
+
+    public ControllerResult listAllTransactions() {
+        requireAdmin();
+        List<OrderTransaction> txList = txRepo.getAll();
+        return success("Tim thay " + txList.size() + " log giao dich.", txList);
+    }
+
+    public ControllerResult listFailedTransactions() {
+        requireAdmin();
+        List<OrderTransaction> failedTx = txRepo.getAll().stream()
+                .filter(tx -> !tx.isSuccess())
+                .collect(Collectors.toList());
+        return success("Tim thay " + failedTx.size() + " log giao dich THAT BAI.", failedTx);
     }
 }

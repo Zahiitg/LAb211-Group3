@@ -21,7 +21,7 @@ public class CsvParseJUnitTest {
 
     @Test
     public void testCustomerCsvRoundTrip() {
-        Customer c = new Customer("C01", "Nguyen Van A", "a@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD, "");
+        Customer c = new Customer("C01", "Nguyen Van A", "a@gmail.com", "pass123", AccountStatus.APPROVED, CustTier.GOLD, "123 Main St");
         String csv = c.toCsvLine();
 
         Customer parsed = new Customer();
@@ -33,11 +33,12 @@ public class CsvParseJUnitTest {
         assertEquals("pass123", parsed.getPassword());
         assertEquals(AccountStatus.APPROVED, parsed.getStatus());
         assertEquals(CustTier.GOLD, parsed.getTier());
+        assertEquals("123 Main St", parsed.getAddress());
     }
 
     @Test
     public void testCustomerCsvWithCommaInName() {
-        Customer c = new Customer("C02", "Nguyen Van A, VIP", "b@gmail.com", "pass456", AccountStatus.APPROVED, CustTier.SILVER, "");
+        Customer c = new Customer("C02", "Nguyen Van A, VIP", "b@gmail.com", "pass456", AccountStatus.APPROVED, CustTier.SILVER, "123, 456");
         String csv = c.toCsvLine();
 
         Customer parsed = new Customer();
@@ -46,6 +47,7 @@ public class CsvParseJUnitTest {
         assertEquals("Nguyen Van A, VIP", parsed.getName());
         assertEquals("b@gmail.com", parsed.getEmail());
         assertEquals(CustTier.SILVER, parsed.getTier());
+        assertEquals("123, 456", parsed.getAddress());
     }
 
     @Test
@@ -58,6 +60,7 @@ public class CsvParseJUnitTest {
 
         assertEquals(AccountStatus.BANNED, parsed.getStatus());
         assertEquals(CustTier.BRONZE, parsed.getTier());
+        assertEquals("", parsed.getAddress());
     }
 
     // ========================================================================

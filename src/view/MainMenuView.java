@@ -70,9 +70,8 @@ public class MainMenuView {
                 CustomerView customerView = new CustomerView();
                 customerView.start(); // Chuyen quyen dieu khien sang CustomerView
             } else if (authState.isSeller()) {
-                ConsoleUI.printError("SellerView do TV2 dam nhiem, chua duoc xay dung.");
-                authState.logout(); // Dang xuat tam thoi de tranh loi khet
-                ConsoleUI.pause();
+                SellerView sellerView = new SellerView();
+                sellerView.start(); // Chuyen quyen dieu khien sang SellerView
             }
         } else {
             ConsoleUI.printError(result.getMessage());

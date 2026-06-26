@@ -45,11 +45,12 @@ public class OrderController extends BaseController {
      * Constructor mac dinh - su dung duong dan file CSV chuan cua du an.
      */
     public OrderController() {
-        this.orderRepo = new OrderRepository("data/orders.csv");
-        this.detailRepo = new OrderDetailRepository("data/order_details.csv");
-        this.txRepo = new OrderTransactionRepository("data/transactions.csv");
-        this.itemRepo = new FlashSaleItemRepository("data/flash_items.csv");
-        this.productRepo = new repository.ProductRepository("data/products.csv");
+        AuthenticationState authState = AuthenticationState.getInstance();
+        this.orderRepo = authState.getOrderRepo();
+        this.detailRepo = authState.getDetailRepo();
+        this.txRepo = authState.getTxRepo();
+        this.itemRepo = authState.getFlashSaleItemRepo();
+        this.productRepo = authState.getProductRepo();
     }
 
     /**
@@ -60,13 +61,13 @@ public class OrderController extends BaseController {
      * @param txFile       Duong dan file order_transactions.csv
      * @param itemFile     Duong dan file flash_items.csv
      */
-    public OrderController(String orderFile, String detailFile,
-                           String txFile, String itemFile) {
+    public OrderController(String orderFile, String detailFile, String txFile, String itemFile) {
+        AuthenticationState authState = AuthenticationState.getInstance();
         this.orderRepo = new OrderRepository(orderFile);
         this.detailRepo = new OrderDetailRepository(detailFile);
         this.txRepo = new OrderTransactionRepository(txFile);
         this.itemRepo = new FlashSaleItemRepository(itemFile);
-        this.productRepo = new repository.ProductRepository("data/products.csv");
+        this.productRepo = authState.getProductRepo();
     }
 
     // =====================================================================

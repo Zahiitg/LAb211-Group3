@@ -4,24 +4,91 @@ import model.Customer;
 import model.enums.AccountStatus;
 import model.enums.CustTier;
 import repository.CustomerRepository;
+import repository.ProductRepository;
+import repository.FlashSaleItemRepository;
+import repository.OrderRepository;
+import repository.OrderDetailRepository;
+import model.FlashSaleItem;
+import model.Product;
+import model.Order;
+import model.OrderDetail;
+import model.enums.OrderStatus;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Controller xu ly toan bo nghiep vu lien quan den Khach hang (Customer).
  *
  * Chuc nang:
  * 1. register(name, email, password) → Dang ky tai khoan moi
- * 2. login(email, password) → Dang nhap va luu phien vao AuthenticationState
+ * 2. login(email, password)          → Dang nhap va luu phien vao AuthenticationState
  *
  * Tat ca ham deu tra ve ControllerResult de tang View xu ly nhat quan,
  * KHONG BAO GIO quang Exception ra ngoai hoac tra ve null.
  *
  * @author Thanh vien 2 - Customer Logic
- * @refactored-by Thanh vien 1 - Core Architecture (ap dung chuan
- *                BaseController)
+ * @refactored-by Thanh vien 1 - Core Architecture (ap dung chuan BaseController)
  */
 public class CustomerController extends BaseController {
 
     private final CustomerRepository customerRepo;
+    private final ProductRepository productRepo;
+    private final FlashSaleItemRepository flashSaleItemRepo;
+    private final OrderRepository orderRepo;
+    private final OrderDetailRepository detailRepo;
+
+    // CART STATE
+    private static final Map<String, Map<String, Integer>> globalCarts = new HashMap<>();
+    private static boolean isCartLoaded = false;
+    private static final String CART_FILE = "data/carts.csv";
+
+    private void loadCartsFromFile() {
+        if (isCartLoaded) return;
+        isCartLoaded = true;
+        java.io.File file = new java.io.File(CART_FILE);
+        if (!file.exists()) return;
+        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty() || line.startsWith("customerId")) continue;
+                String[] parts = line.split(",");
+                if (parts.length >= 3) {
+                    String custId = parts[0].trim();
+                    String itemId = parts[1].trim();
+                    int qty = Integer.parseInt(parts[2].trim());
+                    globalCarts.computeIfAbsent(custId, k -> new HashMap<>()).put(itemId, qty);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Loi khi doc file gio hang: " + e.getMessage());
+        }
+    }
+
+    private void saveCartsToFile() {
+        try (java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.FileWriter(CART_FILE))) {
+            pw.println("customerId,itemId,quantity");
+            for (Map.Entry<String, Map<String, Integer>> custEntry : globalCarts.entrySet()) {
+                String custId = custEntry.getKey();
+                for (Map.Entry<String, Integer> itemEntry : custEntry.getValue().entrySet()) {
+                    pw.println(custId + "," + itemEntry.getKey() + "," + itemEntry.getValue());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Loi khi luu file gio hang: " + e.getMessage());
+        }
+    }
+
+    private Map<String, Integer> getCart() {
+        loadCartsFromFile();
+        if (!authState.isCustomer()) return new HashMap<>();
+        Customer c = (Customer) authState.getCurrentUser();
+        return globalCarts.computeIfAbsent(c.getId(), k -> new HashMap<>());
+    }
 
     // =====================================================================
     // CONSTRUCTORS
@@ -31,16 +98,25 @@ public class CustomerController extends BaseController {
      * Constructor mac dinh - su dung duong dan file CSV chuan cua du an.
      */
     public CustomerController() {
-        this.customerRepo = new CustomerRepository("data/customers.csv");
+        AuthenticationState authState = AuthenticationState.getInstance();
+        this.customerRepo = authState.getCustomerRepo();
+        this.productRepo = authState.getProductRepo();
+        this.flashSaleItemRepo = authState.getFlashSaleItemRepo();
+        this.orderRepo = authState.getOrderRepo();
+        this.detailRepo = authState.getDetailRepo();
     }
 
     /**
      * Constructor cho testing hoac duong dan tuy chinh.
-     * 
      * @param filePath Duong dan den file CSV customers
      */
     public CustomerController(String filePath) {
+        AuthenticationState authState = AuthenticationState.getInstance();
         this.customerRepo = new CustomerRepository(filePath);
+        this.productRepo = authState.getProductRepo();
+        this.flashSaleItemRepo = authState.getFlashSaleItemRepo();
+        this.orderRepo = authState.getOrderRepo();
+        this.detailRepo = authState.getDetailRepo();
     }
 
     // =====================================================================
@@ -69,11 +145,11 @@ public class CustomerController extends BaseController {
         if (name == null || name.trim().isEmpty()) {
             return error("Ten khong duoc de trong!");
         }
-        if (email == null || email.trim().isEmpty()) {
-            return error("Email khong duoc de trong!");
+        if (email == null || !email.trim().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            return error("Email khong hop le! Vui long kiem tra lai dinh dang.");
         }
-        if (password == null || password.trim().isEmpty()) {
-            return error("Mat khau khong duoc de trong!");
+        if (password == null || password.trim().length() < 6) {
+            return error("Mat khau phai tu 6 ky tu tro len!");
         }
 
         // --- KIEM TRA TRUNG EMAIL ---
@@ -91,25 +167,25 @@ public class CustomerController extends BaseController {
                     if (num > maxNum) {
                         maxNum = num;
                     }
-                } catch (NumberFormatException ignored) {
-                }
+                } catch (NumberFormatException ignored) {}
             }
         }
         String newId = String.format("C%05d", maxNum + 1);
 
         // --- TAO VA LUU CUSTOMER MOI ---
         Customer newCust = new Customer(
-                newId,
-                name.trim(),
-                email.trim(),
-                password,
-                AccountStatus.APPROVED,
-                CustTier.BRONZE,
-                address != null ? address.trim() : "");
+            newId,
+            name.trim(),
+            email.trim(),
+            password,
+            AccountStatus.APPROVED,
+            CustTier.BRONZE,
+            address != null ? address.trim() : ""
+        );
         customerRepo.add(newCust);
 
         return success("Dang ky thanh cong! Chao mung " + newCust.getName()
-                + " (Ma KH: " + newId + ")", newCust);
+                       + " (Ma KH: " + newId + ")", newCust);
     }
 
     // =====================================================================
@@ -153,15 +229,14 @@ public class CustomerController extends BaseController {
         // --- KIEM TRA TRANG THAI TAI KHOAN ---
         if (c.getStatus() == AccountStatus.BANNED) {
             return error("Tai khoan cua ban da bi khoa (BANNED). "
-                    + "Vui long lien he Admin de duoc ho tro!");
+                        + "Vui long lien he Admin de duoc ho tro!");
         }
 
         // --- LUU PHIEN DANG NHAP ---
         // Su dung AuthenticationState (Singleton) cua he thong
         // Luu y: authState duoc ke thua tu BaseController
         // Tuy nhien vi AuthenticationState co ham login() rieng,
-        // o day ta chi set currentUser thong qua phuong thuc login cua
-        // AuthenticationState
+        // o day ta chi set currentUser thong qua phuong thuc login cua AuthenticationState
         // De tranh goi chong cheo, ta su dung truc tiep:
         AuthenticationState.getInstance().loginDirect(c);
 
@@ -169,7 +244,7 @@ public class CustomerController extends BaseController {
         String statusNote = "";
         if (c.getStatus() == AccountStatus.PENDING) {
             statusNote = " (Luu y: Tai khoan dang cho duyet, "
-                    + "mot so chuc nang co the bi han che)";
+                       + "mot so chuc nang co the bi han che)";
         }
 
         return success("Dang nhap thanh cong! Xin chao " + c.getName() + statusNote, c);
@@ -180,14 +255,205 @@ public class CustomerController extends BaseController {
     // =====================================================================
 
     /**
-     * Cap nhat ho so cua Customer (hien tai chi ho tro dia chi).
+     * Cap nhat ho so cua Customer.
      */
-    public ControllerResult updateProfile(Customer c, String newAddress) {
-        if (c == null)
-            return error("Khong tim thay thong tin khach hang.");
-        c.setAddress(newAddress);
+    public ControllerResult updateProfile(String name, String password, String address) {
+        requireCustomer();
+        Customer c = (Customer) authState.getCurrentUser();
+        
+        if (name != null && !name.trim().isEmpty()) c.setName(name);
+        if (password != null && !password.trim().isEmpty()) c.setPassword(password);
+        if (address != null && !address.trim().isEmpty()) c.setAddress(address);
+        
         customerRepo.update(c);
         return success("Cap nhat ho so thanh cong!", c);
+    }
+
+    // =====================================================================
+    // GIO HANG (CART)
+    // =====================================================================
+
+    public ControllerResult addToCart(String itemId, int qty) {
+        requireCustomer();
+        if (qty <= 0) return error("So luong phai lon hon 0!");
+        
+        // Kiem tra item co ton tai khong va kiem tra ton kho
+        Product p = productRepo.getById(itemId);
+        if (p != null) {
+            int currentQty = getCart().getOrDefault(itemId, 0);
+            if (currentQty + qty > p.getStock()) {
+                return error("So luong vuot qua ton kho (Hien co: " + p.getStock() + ", Da co trong gio: " + currentQty + ")!");
+            }
+        } else {
+            FlashSaleItem fsi = flashSaleItemRepo.getById(itemId);
+            if (fsi == null) {
+                return error("Khong tim thay san pham voi ma: " + itemId);
+            }
+            int currentQty = getCart().getOrDefault(itemId, 0);
+            int stockLeft = fsi.getLimitedQty() - fsi.getSoldQty();
+            if (currentQty + qty > stockLeft) {
+                return error("So luong vuot qua ton kho Flash Sale (Con lai: " + stockLeft + ", Da co trong gio: " + currentQty + ")!");
+            }
+        }
+        
+        getCart().put(itemId, getCart().getOrDefault(itemId, 0) + qty);
+        saveCartsToFile();
+        return success("Da them vao gio hang!", getCart());
+    }
+
+    public ControllerResult viewCart() {
+        requireCustomer();
+        return success("Lay gio hang thanh cong", getCart());
+    }
+
+    public ControllerResult clearCart() {
+        requireCustomer();
+        getCart().clear();
+        saveCartsToFile();
+        return success("Da xoa sach gio hang", null);
+    }
+
+    public ControllerResult checkoutCart() {
+        requireCustomer();
+        if (getCart().isEmpty()) return error("Gio hang dang trong!");
+        
+        Customer c = (Customer) authState.getCurrentUser();
+        
+        // 1. Tao 1 Order cha (Phat sinh ID tu dong tang theo chuan O00000)
+        int maxNum = 0;
+        for (Order o : orderRepo.getAll()) {
+            String id = o.getId();
+            if (id != null) {
+                String numStr = id.replaceAll("[^0-9]", "");
+                if (!numStr.isEmpty()) {
+                    try {
+                        int num = Integer.parseInt(numStr);
+                        if (num > maxNum) {
+                            maxNum = num;
+                        }
+                    } catch (NumberFormatException ignored) {} // Bo qua cac ID qua lon (nhu currentTimeMillis)
+                }
+            }
+        }
+        String orderId = String.format("O%05d", maxNum + 1);
+        Order order = new Order(orderId, c.getId(), LocalDateTime.now(), OrderStatus.PENDING);
+        
+        double totalRevenue = 0;
+        List<OrderDetail> details = new ArrayList<>();
+        
+        // 2. Duyet tung item de tru kho va tao OrderDetail
+        for (Map.Entry<String, Integer> entry : getCart().entrySet()) {
+            String itemId = entry.getKey();
+            int qty = entry.getValue();
+            
+            Product p = productRepo.getById(itemId);
+            if (p != null) {
+                boolean success = productRepo.sellWithOptimisticLock(itemId, qty);
+                if (!success) return error("San pham " + p.getName() + " khong du ton kho, vui long thu lai!");
+                
+                OrderDetail d = new OrderDetail(UUID.randomUUID().toString(), orderId, itemId, qty, p.getPrice());
+                details.add(d);
+                totalRevenue += p.getPrice() * qty;
+            } else {
+                FlashSaleItem fsi = flashSaleItemRepo.getById(itemId);
+                if (fsi != null) {
+                    boolean success = flashSaleItemRepo.sellWithOptimisticLock(itemId, qty);
+                    if (!success) return error("San pham Flash Sale " + itemId + " khong du ton kho, vui long thu lai!");
+                    
+                    // Deduct from original product stock
+                    boolean prodSuccess = productRepo.sellWithOptimisticLock(fsi.getProductId(), qty);
+                    if (!prodSuccess) {
+                        fsi.setSoldQty(fsi.getSoldQty() - qty);
+                        flashSaleItemRepo.update(fsi);
+                        return error("San pham goc cua Flash Sale khong du ton kho!");
+                    }
+                    
+                    OrderDetail d = new OrderDetail(UUID.randomUUID().toString(), orderId, itemId, qty, fsi.getSalePrice());
+                    details.add(d);
+                    totalRevenue += fsi.getSalePrice() * qty;
+                }
+            }
+        }
+        
+        // 3. Luu vao DB
+        orderRepo.add(order);
+        for (OrderDetail d : details) {
+            detailRepo.add(d);
+        }
+        
+        // 4. Clear cart
+        getCart().clear();
+        saveCartsToFile();
+        
+        return success("Dat hang thanh cong! Ma don hang cua ban la: " + orderId, null);
+    }
+
+    // =====================================================================
+    // QUAN LY DON HANG VA SAN PHAM
+    // =====================================================================
+
+    public ControllerResult searchProducts(String keyword) {
+        requireCustomer();
+        List<Product> list = productRepo.getAll();
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String kw = keyword.toLowerCase();
+            list = list.stream().filter(p -> p.getName().toLowerCase().contains(kw)).collect(java.util.stream.Collectors.toList());
+        }
+        return success("Tim thay " + list.size() + " san pham.", list);
+    }
+
+    public ControllerResult filterProductsByCategory(String category) {
+        requireCustomer();
+        List<Product> list = productRepo.getAll();
+        if (category != null && !category.trim().isEmpty()) {
+            String cat = category.toLowerCase();
+            list = list.stream().filter(p -> p.getCategory().toLowerCase().contains(cat)).collect(java.util.stream.Collectors.toList());
+        }
+        return success("Tim thay " + list.size() + " san pham.", list);
+    }
+
+    public ControllerResult cancelOrder(String orderId) {
+        requireCustomer();
+        Customer c = (Customer) authState.getCurrentUser();
+        
+        if (orderId == null || orderId.trim().isEmpty()) return error("ID khong duoc de trong");
+        
+        Order target = orderRepo.getById(orderId);
+        if (target == null || !target.getCustomerId().equals(c.getId())) {
+            return error("Khong tim thay don hang cua ban.");
+        }
+        if (target.getStatus() != OrderStatus.PENDING) {
+            return error("Chi co the huy don hang dang o trang thai PENDING!");
+        }
+        
+        // Hoan kho
+        List<OrderDetail> details = detailRepo.findByOrderId(orderId);
+        for (OrderDetail detail : details) {
+            String itemId = detail.getFlashSaleItemId();
+            int qty = detail.getQuantity();
+            
+            Product p = productRepo.getById(itemId);
+            if (p != null) {
+                p.setStock(p.getStock() + qty);
+                productRepo.update(p);
+            } else {
+                FlashSaleItem fsi = flashSaleItemRepo.getById(itemId);
+                if (fsi != null) {
+                    fsi.setSoldQty(fsi.getSoldQty() - qty);
+                    flashSaleItemRepo.update(fsi);
+                    
+                    Product origP = productRepo.getById(fsi.getProductId());
+                    if (origP != null) {
+                        origP.setStock(origP.getStock() + qty);
+                        productRepo.update(origP);
+                    }
+                }
+            }
+        }
+        
+        target.setStatus(OrderStatus.CANCELLED);
+        orderRepo.update(target);
+        return success("Da huy don hang (CANCELLED) va hoan kho: " + orderId, target);
     }
 
     // =====================================================================
@@ -196,7 +462,6 @@ public class CustomerController extends BaseController {
 
     /**
      * Lay CustomerRepository (dung cho Admin hoac Unit Test).
-     * 
      * @return CustomerRepository
      */
     public CustomerRepository getCustomerRepo() {

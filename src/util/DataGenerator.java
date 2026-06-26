@@ -33,6 +33,14 @@ public class DataGenerator {
         put("Sports", new String[]{"Size 39", "Size 41", "Size 43", "Pro", "Elite", "V2", "V3", "Competition", "Training", "Outdoor"});
     }};
 
+    // === TEN SU KIEN FLASH SALE ===
+    private static final String[] EVENT_NAMES = {
+        "Sieu Sale Ngay Doi", "Xa Kho Don Tet", "Flash Sale 12/12", "Black Friday",
+        "Cyber Monday", "Sale Giua Thang", "Sale Luong Ve", "Ngay Hoi Mua Sam",
+        "Tuan Le Vang", "Dai Tiec Sale", "Sale Dong Gia", "Clearance Sale",
+        "Mid-Year Sale", "Sinh Nhat Tri An", "Deal Soc Nua Dem"
+    };
+
     private static String generateName() {
         return LAST_NAMES[RANDOM.nextInt(LAST_NAMES.length)] + " " +
                MIDDLE_NAMES[RANDOM.nextInt(MIDDLE_NAMES.length)] + " " +
@@ -172,7 +180,8 @@ public class DataGenerator {
                 LocalDateTime start = now.minusDays(RANDOM.nextInt(30));
                 LocalDateTime end = start.plusHours(RANDOM.nextInt(48) + 1);
                 SaleStatus status = end.isBefore(now) ? SaleStatus.ENDED : SaleStatus.ONGOING;
-                FlashSaleEvent event = new FlashSaleEvent(String.format("E%05d", i), "Event " + i, start, end, status);
+                String eventName = EVENT_NAMES[RANDOM.nextInt(EVENT_NAMES.length)] + " " + i;
+                FlashSaleEvent event = new FlashSaleEvent(String.format("E%05d", i), eventName, start, end, status);
                 ids.add(event.getId());
                 bw.write(event.toCsvLine());
                 bw.newLine();
@@ -183,6 +192,19 @@ public class DataGenerator {
 
     private static List<String> generateFlashItems(int count, List<String> productIds, List<String> eventIds) throws IOException {
         List<String> ids = new ArrayList<>();
+        
+        // Doc tam products de lay gia goc
+        Map<String, Double> productPrices = new HashMap<>();
+        try (Scanner sc = new Scanner(new java.io.File(DATA_DIR + "products.csv"))) {
+            if (sc.hasNextLine()) sc.nextLine();
+            while (sc.hasNextLine()) {
+                String[] parts = util.CsvUtil.splitCsvLine(sc.nextLine());
+                if (parts.length >= 5) {
+                    productPrices.put(parts[0], Double.parseDouble(parts[4]));
+                }
+            }
+        } catch (Exception e) {}
+
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(DATA_DIR + "flash_items.csv"))) {
             bw.write("id,productId,eventId,salePrice,limitedQty,soldQty,version");
             bw.newLine();
@@ -190,7 +212,10 @@ public class DataGenerator {
                 String prodId = productIds.get(RANDOM.nextInt(productIds.size()));
                 String eventId = eventIds.get(RANDOM.nextInt(eventIds.size()));
                 int limit = RANDOM.nextInt(100) + 10;
-                double salePrice = (RANDOM.nextInt(5000) + 50) * 1000.0;
+                
+                double originalPrice = productPrices.getOrDefault(prodId, (RANDOM.nextInt(5000) + 50) * 1000.0);
+                double salePrice = originalPrice * (1.0 - (RANDOM.nextInt(50) + 10) / 100.0); // Giam tu 10% den 60%
+                
                 FlashSaleItem item = new FlashSaleItem(String.format("FI%05d", i), prodId, eventId, salePrice, limit, RANDOM.nextInt(limit), 1);
                 ids.add(item.getId());
                 bw.write(item.toCsvLine());

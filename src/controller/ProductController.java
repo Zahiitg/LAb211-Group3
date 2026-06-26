@@ -12,7 +12,7 @@ public class ProductController extends BaseController {
     private final ProductRepository productRepo;
 
     public ProductController() {
-        this.productRepo = new ProductRepository("data/products.csv");
+        this.productRepo = AuthenticationState.getInstance().getProductRepo();
     }
 
     public ProductController(String filePath) {

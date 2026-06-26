@@ -8,6 +8,13 @@ import model.enums.AccountStatus;
 import repository.AdminRepository;
 import repository.CustomerRepository;
 import repository.SellerRepository;
+import repository.ProductRepository;
+import repository.FlashSaleItemRepository;
+import repository.FlashSaleEventRepository;
+import repository.OrderRepository;
+import repository.OrderDetailRepository;
+import repository.OrderTransactionRepository;
+import repository.CategoryRepository;
 
 /**
  * Singleton quan ly trang thai xac thuc (phien dang nhap) cua toan bo ung dung.
@@ -50,6 +57,13 @@ public class AuthenticationState {
     private CustomerRepository customerRepo;
     private SellerRepository sellerRepo;
     private AdminRepository adminRepo;
+    private ProductRepository productRepo;
+    private FlashSaleItemRepository flashSaleItemRepo;
+    private FlashSaleEventRepository flashSaleEventRepo;
+    private OrderRepository orderRepo;
+    private OrderDetailRepository detailRepo;
+    private OrderTransactionRepository txRepo;
+    private CategoryRepository categoryRepo;
 
     // =====================================================================
     // CONSTRUCTOR & SINGLETON ACCESS
@@ -62,6 +76,13 @@ public class AuthenticationState {
         this.customerRepo = new CustomerRepository("data/customers.csv");
         this.sellerRepo = new SellerRepository("data/sellers.csv");
         this.adminRepo = new AdminRepository("data/admins.csv");
+        this.productRepo = new ProductRepository("data/products.csv");
+        this.flashSaleItemRepo = new FlashSaleItemRepository("data/flash_items.csv");
+        this.flashSaleEventRepo = new FlashSaleEventRepository("data/flash_events.csv");
+        this.orderRepo = new OrderRepository("data/orders.csv");
+        this.detailRepo = new OrderDetailRepository("data/order_details.csv");
+        this.txRepo = new OrderTransactionRepository("data/transactions.csv");
+        this.categoryRepo = new CategoryRepository("data/categories.csv");
     }
 
     /**
@@ -95,6 +116,18 @@ public class AuthenticationState {
         instance.adminRepo = adminRepo;
         instance.currentUser = null;
     }
+
+    // =====================================================================
+    // TRUY CAP REPOSITORY DUNG CHUNG
+    // =====================================================================
+
+    public ProductRepository getProductRepo() { return productRepo; }
+    public FlashSaleItemRepository getFlashSaleItemRepo() { return flashSaleItemRepo; }
+    public FlashSaleEventRepository getFlashSaleEventRepo() { return flashSaleEventRepo; }
+    public OrderRepository getOrderRepo() { return orderRepo; }
+    public OrderDetailRepository getDetailRepo() { return detailRepo; }
+    public OrderTransactionRepository getTxRepo() { return txRepo; }
+    public CategoryRepository getCategoryRepo() { return categoryRepo; }
 
     // =====================================================================
     // DANG NHAP

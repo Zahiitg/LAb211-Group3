@@ -83,6 +83,46 @@ public class ConsoleUI {
     // =====================================================================
 
     /**
+     * Nhan input la mot so thuc (double).
+     *
+     * @param prompt Cau hoi in ra man hinh
+     * @return So thuc hop le
+     */
+    public static double getDouble(String prompt) {
+        while (true) {
+            try {
+                System.out.print(CYAN + prompt + RESET);
+                String input = scanner.nextLine().trim();
+                return Double.parseDouble(input);
+            } catch (NumberFormatException e) {
+                printError("Loi: Vui long nhap mot so thuc hop le!");
+            }
+        }
+    }
+
+    /**
+     * Nhan input la mot so thuc nam trong khoang [min, max].
+     *
+     * @param prompt Cau hoi in ra man hinh
+     * @param min Gia tri nho nhat cho phep
+     * @param max Gia tri lon nhat cho phep
+     * @return So thuc hop le
+     */
+    public static double getDouble(String prompt, double min, double max) {
+        while (true) {
+            double value = getDouble(prompt);
+            if (value >= min && value <= max) {
+                return value;
+            }
+            printError("Loi: Vui long nhap so trong khoang tu " + min + " den " + max + "!");
+        }
+    }
+
+    // =====================================================================
+    // HIEN THI THONG BAO (OUTPUT FORMATTING)
+    // =====================================================================
+
+    /**
      * In tieu de cua mot Menu.
      */
     public static void printHeader(String title) {

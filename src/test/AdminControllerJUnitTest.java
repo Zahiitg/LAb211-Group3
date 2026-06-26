@@ -41,6 +41,9 @@ public class AdminControllerJUnitTest {
     private static final String TEST_CUSTOMERS_FILE = "test_ctrl_customers.csv";
     private static final String TEST_SELLERS_FILE   = "test_ctrl_sellers.csv";
     private static final String TEST_ADMINS_FILE    = "test_ctrl_admins.csv";
+    private static final String TEST_ORDERS_FILE    = "test_ctrl_orders.csv";
+    private static final String TEST_DETAILS_FILE   = "test_ctrl_details.csv";
+    private static final String TEST_PRODUCTS_FILE  = "test_ctrl_products.csv";
 
     private AuthenticationState authState;
     private AdminController adminController;
@@ -86,6 +89,34 @@ public class AdminControllerJUnitTest {
         AuthenticationState.resetForTesting(customerRepo, sellerRepo, adminRepo);
         authState = AuthenticationState.getInstance();
         adminController = new AdminController();
+        
+        try {
+            // Tao file Orders test
+            try (FileWriter fw = new FileWriter(TEST_ORDERS_FILE)) {
+                fw.write("id,customerId,orderTime,status\n");
+                fw.write("O001,C001,2023-10-01T10:00:00,PENDING\n");
+                fw.write("O002,C001,2023-10-01T11:00:00,VERIFIED\n");
+                fw.write("O003,C001,2023-10-01T12:00:00,COMPLETED\n");
+            }
+            
+            // Tao file OrderDetails test
+            try (FileWriter fw = new FileWriter(TEST_DETAILS_FILE)) {
+                fw.write("id,orderId,flashSaleItemId,quantity,priceAtPurchase\n");
+                fw.write("D001,O003,P001,2,50000.0\n"); // Tinh vao doanh thu cua O003
+            }
+            
+            // Inject Test Repositories via Reflection de khong anh huong data that
+            java.lang.reflect.Field orderRepoField = AdminController.class.getDeclaredField("orderRepo");
+            orderRepoField.setAccessible(true);
+            orderRepoField.set(adminController, new repository.OrderRepository(TEST_ORDERS_FILE));
+            
+            java.lang.reflect.Field detailRepoField = AdminController.class.getDeclaredField("detailRepo");
+            detailRepoField.setAccessible(true);
+            detailRepoField.set(adminController, new repository.OrderDetailRepository(TEST_DETAILS_FILE));
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @After
@@ -102,6 +133,9 @@ public class AdminControllerJUnitTest {
         new File(TEST_CUSTOMERS_FILE).delete();
         new File(TEST_SELLERS_FILE).delete();
         new File(TEST_ADMINS_FILE).delete();
+        new File(TEST_ORDERS_FILE).delete();
+        new File(TEST_DETAILS_FILE).delete();
+        new File(TEST_PRODUCTS_FILE).delete();
     }
 
     // =====================================================================
@@ -454,5 +488,106 @@ public class AdminControllerJUnitTest {
 
         assertTrue(result.isSuccess());
         assertNull("Data phai null khi khong truyen", result.getData());
+    }
+
+    // =====================================================================
+    // NHOM 9: TEST ADMIN CONTROLLER - QUAN LY DON HANG
+    // =====================================================================
+
+    @Test
+    public void testListAllOrders() {
+        authState.login("admin@test.com", "admin123");
+        ControllerResult result = adminController.listAllOrders();
+        
+        assertTrue("Lay danh sach don hang phai thanh cong", result.isSuccess());
+        @SuppressWarnings("unchecked")
+        List<model.Order> orders = (List<model.Order>) result.getData();
+        assertEquals("Phai co 3 don hang trong file test", 3, orders.size());
+    }
+
+    @Test
+    public void testVerifyOrderSuccess() {
+        authState.login("admin@test.com", "admin123");
+        // O001 dang la PENDING
+        ControllerResult result = adminController.verifyOrder("O001");
+        assertTrue("Duyet don hang PENDING phai thanh cong", result.isSuccess());
+        
+        model.Order updated = (model.Order) result.getData();
+        assertEquals("Trang thai phai chuyen sang VERIFIED", model.enums.OrderStatus.VERIFIED, updated.getStatus());
+    }
+
+    @Test
+    public void testVerifyOrderWrongStatus() {
+        authState.login("admin@test.com", "admin123");
+        // O002 dang la VERIFIED
+        ControllerResult result = adminController.verifyOrder("O002");
+        assertFalse("Duyet don hang khong phai PENDING phai that bai", result.isSuccess());
+    }
+
+    @Test
+    public void testCompleteOrderSuccess() {
+        authState.login("admin@test.com", "admin123");
+        // O002 dang la VERIFIED
+        ControllerResult result = adminController.completeOrder("O002");
+        assertTrue("Hoan thanh don hang VERIFIED phai thanh cong", result.isSuccess());
+        
+        model.Order updated = (model.Order) result.getData();
+        assertEquals("Trang thai phai chuyen sang COMPLETED", model.enums.OrderStatus.COMPLETED, updated.getStatus());
+    }
+
+    @Test
+    public void testCancelOrderSuccess() {
+        authState.login("admin@test.com", "admin123");
+        // O001 dang la PENDING
+        ControllerResult result = adminController.cancelOrder("O001");
+        assertTrue("Huy don hang phai thanh cong", result.isSuccess());
+        
+        model.Order updated = (model.Order) result.getData();
+        assertEquals("Trang thai phai chuyen sang CANCELLED", model.enums.OrderStatus.CANCELLED, updated.getStatus());
+    }
+
+    // =====================================================================
+    // NHOM 10: TEST ADMIN CONTROLLER - THONG KE & TIM KIEM
+    // =====================================================================
+
+    @Test
+    public void testGetDashboardStats() {
+        authState.login("admin@test.com", "admin123");
+        ControllerResult result = adminController.getDashboardStats();
+        
+        assertTrue("Lay thong ke phai thanh cong", result.isSuccess());
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> stats = (java.util.Map<String, Object>) result.getData();
+        
+        assertTrue("Phai chua totalOrders", stats.containsKey("totalOrders"));
+        assertTrue("Phai chua totalRevenue", stats.containsKey("totalRevenue"));
+        
+        // Kiem tra tinh toan doanh thu: O003 COMPLETED, detail co 2 * 50000 = 100000
+        double revenue = (Double) stats.get("totalRevenue");
+        assertEquals("Doanh thu phai la 100000", 100000.0, revenue, 0.001);
+    }
+
+    @Test
+    public void testSearchCustomersFound() {
+        authState.login("admin@test.com", "admin123");
+        // "Nguyen" match "Nguyen Van A"
+        ControllerResult result = adminController.searchCustomers("Nguyen");
+        assertTrue(result.isSuccess());
+        
+        @SuppressWarnings("unchecked")
+        List<model.Customer> found = (List<model.Customer>) result.getData();
+        assertEquals("Phai tim thay 1 Customer", 1, found.size());
+        assertEquals("Ten phai la Nguyen Van A", "Nguyen Van A", found.get(0).getName());
+    }
+
+    @Test
+    public void testSearchCustomersNotFound() {
+        authState.login("admin@test.com", "admin123");
+        ControllerResult result = adminController.searchCustomers("NonExistentName");
+        assertTrue(result.isSuccess()); // Ham search luon tra ve success ke ca khi result = 0
+        
+        @SuppressWarnings("unchecked")
+        List<model.Customer> found = (List<model.Customer>) result.getData();
+        assertEquals("Danh sach phai rong", 0, found.size());
     }
 }
