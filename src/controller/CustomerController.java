@@ -456,9 +456,180 @@ public class CustomerController extends BaseController {
         return success("Da huy don hang (CANCELLED) va hoan kho: " + orderId, target);
     }
 
+    /**
+     * Tra ve danh sach chi tiet tung item trong gio hang cua Customer hien tai.
+     * Moi phan tu la Object[]: {maItem, tenSP, soLuong, donGia}
+     * Dung cho View de hien thi bang gio hang day du thong tin.
+     */
+    public ControllerResult getCartItemDetails() {
+        requireCustomer();
+        Map<String, Integer> cart = getCart();
+        List<Object[]> details = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : cart.entrySet()) {
+            String itemId = entry.getKey();
+            int qty = entry.getValue();
+            String name = "(Khong ro)"; 
+            double price = 0.0;
+
+            Product p = productRepo.getById(itemId);
+            if (p != null) {
+                name  = p.getName();
+                price = p.getPrice();
+            } else {
+                FlashSaleItem fsi = flashSaleItemRepo.getById(itemId);
+                if (fsi != null) {
+                    price = fsi.getSalePrice();
+                    Product origP = productRepo.getById(fsi.getProductId());
+                    name = (origP != null ? origP.getName() : itemId) + " [Flash Sale]";
+                }
+            }
+            details.add(new Object[]{itemId, name, qty, price});
+        }
+        return success("Lay chi tiet gio hang thanh cong", details);
+    }
+
+    /**
+     * Checkout chi cac item duoc chon (theo danh sach ma item).
+     * Sau khi checkout thanh cong, xoa cac item da thanh toan khoi gio.
+     * Cac item chua chon duoc giu lai trong gio.
+     *
+     * @param selectedItemIds Danh sach ma item can thanh toan
+     */
+    public ControllerResult checkoutSelectedItems(List<String> selectedItemIds) {
+        requireCustomer();
+        if (selectedItemIds == null || selectedItemIds.isEmpty()) {
+            return error("Khong co san pham nao duoc chon de thanh toan!");
+        }
+        Map<String, Integer> cart = getCart();
+        if (cart.isEmpty()) return error("Gio hang dang trong!");
+
+        // Kiem tra tat ca item duoc chon ton tai trong gio
+        for (String id : selectedItemIds) {
+            if (!cart.containsKey(id)) {
+                return error("Item '" + id + "' khong co trong gio hang!");
+            }
+        }
+
+        Customer c = (Customer) authState.getCurrentUser();
+
+        // Tao Order cha
+        int maxNum = 0;
+        for (Order o : orderRepo.getAll()) {
+            String id = o.getId();
+            if (id != null) {
+                String numStr = id.replaceAll("[^0-9]", "");
+                if (!numStr.isEmpty()) {
+                    try { int num = Integer.parseInt(numStr); if (num > maxNum) maxNum = num; }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+        String orderId = String.format("O%05d", maxNum + 1);
+        Order order = new Order(orderId, c.getId(), LocalDateTime.now(), OrderStatus.PENDING);
+
+        List<OrderDetail> details = new ArrayList<>();
+
+        // Duyet tung item duoc chon
+        for (String itemId : selectedItemIds) {
+            int qty = cart.get(itemId);
+            Product p = productRepo.getById(itemId);
+            if (p != null) {
+                boolean ok = productRepo.sellWithOptimisticLock(itemId, qty);
+                if (!ok) return error("San pham " + p.getName() + " khong du ton kho!");
+                details.add(new OrderDetail(UUID.randomUUID().toString(), orderId, itemId, qty, p.getPrice()));
+            } else {
+                FlashSaleItem fsi = flashSaleItemRepo.getById(itemId);
+                if (fsi != null) {
+                    boolean ok = flashSaleItemRepo.sellWithOptimisticLock(itemId, qty);
+                    if (!ok) return error("San pham Flash Sale " + itemId + " khong du ton kho!");
+                    boolean prodOk = productRepo.sellWithOptimisticLock(fsi.getProductId(), qty);
+                    if (!prodOk) {
+                        fsi.setSoldQty(fsi.getSoldQty() - qty);
+                        flashSaleItemRepo.update(fsi);
+                        return error("San pham goc cua Flash Sale khong du ton kho!");
+                    }
+                    details.add(new OrderDetail(UUID.randomUUID().toString(), orderId, itemId, qty, fsi.getSalePrice()));
+                }
+            }
+        }
+
+        // Luu Order va OrderDetail
+        orderRepo.add(order);
+        for (OrderDetail d : details) detailRepo.add(d);
+
+        // Xoa cac item da thanh toan khoi gio, giu lai phan con lai
+        for (String itemId : selectedItemIds) cart.remove(itemId);
+        saveCartsToFile();
+
+        return success("Dat hang thanh cong! Ma don hang cua ban la: " + orderId, null);
+    }
+
+    /**
+     * Mua truc tiep 1 san pham (san pham thuong hoac Flash Sale Item)
+     * ma khong them vao gio hang.
+     * Tao Order ngay lap tuc voi trang thai PENDING.
+     *
+     * @param itemId Ma san pham (Product ID hoac FlashSaleItem ID)
+     * @param qty    So luong mua
+     */
+    public ControllerResult directPurchase(String itemId, int qty) {
+        requireCustomer();
+        if (qty <= 0) return error("So luong phai lon hon 0!");
+
+        Customer c = (Customer) authState.getCurrentUser();
+
+        // Tao Order ID tu dong
+        int maxNum = 0;
+        for (Order o : orderRepo.getAll()) {
+            String id = o.getId();
+            if (id != null) {
+                String numStr = id.replaceAll("[^0-9]", "");
+                if (!numStr.isEmpty()) {
+                    try { int num = Integer.parseInt(numStr); if (num > maxNum) maxNum = num; }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+        String orderId = String.format("O%05d", maxNum + 1);
+        Order order = new Order(orderId, c.getId(), LocalDateTime.now(), OrderStatus.PENDING);
+
+        OrderDetail detail;
+        Product p = productRepo.getById(itemId);
+        if (p != null) {
+            if (qty > p.getStock()) {
+                return error("So luong vuot qua ton kho (Hien co: " + p.getStock() + ")!");
+            }
+            boolean ok = productRepo.sellWithOptimisticLock(itemId, qty);
+            if (!ok) return error("San pham " + p.getName() + " khong du ton kho, vui long thu lai!");
+            detail = new OrderDetail(UUID.randomUUID().toString(), orderId, itemId, qty, p.getPrice());
+        } else {
+            FlashSaleItem fsi = flashSaleItemRepo.getById(itemId);
+            if (fsi == null) return error("Khong tim thay san pham voi ma: " + itemId);
+            int stockLeft = fsi.getLimitedQty() - fsi.getSoldQty();
+            if (qty > stockLeft) {
+                return error("So luong vuot qua ton kho Flash Sale (Con lai: " + stockLeft + ")!");
+            }
+            boolean ok = flashSaleItemRepo.sellWithOptimisticLock(itemId, qty);
+            if (!ok) return error("San pham Flash Sale " + itemId + " khong du ton kho, vui long thu lai!");
+            boolean prodOk = productRepo.sellWithOptimisticLock(fsi.getProductId(), qty);
+            if (!prodOk) {
+                fsi.setSoldQty(fsi.getSoldQty() - qty);
+                flashSaleItemRepo.update(fsi);
+                return error("San pham goc cua Flash Sale khong du ton kho!");
+            }
+            detail = new OrderDetail(UUID.randomUUID().toString(), orderId, itemId, qty, fsi.getSalePrice());
+        }
+
+        orderRepo.add(order);
+        detailRepo.add(detail);
+
+        return success("Mua truc tiep thanh cong! Ma don hang: " + orderId, null);
+    }
+
     // =====================================================================
     // GETTER
     // =====================================================================
+
 
     /**
      * Lay CustomerRepository (dung cho Admin hoac Unit Test).
