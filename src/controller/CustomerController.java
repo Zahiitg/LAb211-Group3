@@ -13,6 +13,9 @@ import model.Product;
 import model.Order;
 import model.OrderDetail;
 import model.enums.OrderStatus;
+import model.OrderTransaction;
+import model.enums.LockMechanism;
+import repository.OrderTransactionRepository;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -41,6 +44,7 @@ public class CustomerController extends BaseController {
     private final FlashSaleItemRepository flashSaleItemRepo;
     private final OrderRepository orderRepo;
     private final OrderDetailRepository detailRepo;
+    private final OrderTransactionRepository txRepo;
 
     // CART STATE
     private static final Map<String, Map<String, Integer>> globalCarts = new HashMap<>();
@@ -104,6 +108,7 @@ public class CustomerController extends BaseController {
         this.flashSaleItemRepo = authState.getFlashSaleItemRepo();
         this.orderRepo = authState.getOrderRepo();
         this.detailRepo = authState.getDetailRepo();
+        this.txRepo = authState.getTxRepo();
     }
 
     /**
@@ -117,6 +122,7 @@ public class CustomerController extends BaseController {
         this.flashSaleItemRepo = authState.getFlashSaleItemRepo();
         this.orderRepo = authState.getOrderRepo();
         this.detailRepo = authState.getDetailRepo();
+        this.txRepo = authState.getTxRepo();
     }
 
     // =====================================================================
@@ -319,28 +325,14 @@ public class CustomerController extends BaseController {
         
         Customer c = (Customer) authState.getCurrentUser();
         
-        // 1. Tao 1 Order cha (Phat sinh ID tu dong tang theo chuan O00000)
-        int maxNum = 0;
-        for (Order o : orderRepo.getAll()) {
-            String id = o.getId();
-            if (id != null) {
-                String numStr = id.replaceAll("[^0-9]", "");
-                if (!numStr.isEmpty()) {
-                    try {
-                        int num = Integer.parseInt(numStr);
-                        if (num > maxNum) {
-                            maxNum = num;
-                        }
-                    } catch (NumberFormatException ignored) {} // Bo qua cac ID qua lon (nhu currentTimeMillis)
-                }
-            }
-        }
-        String orderId = String.format("O%05d", maxNum + 1);
+        // 1. Tao 1 Order cha (Phat sinh ID tu dong tang)
+        String orderId = generateNextId("ORD", orderRepo.getAll());
         Order order = new Order(orderId, c.getId(), LocalDateTime.now(), OrderStatus.PENDING);
         
         double totalRevenue = 0;
         List<OrderDetail> details = new ArrayList<>();
         
+        long startTime = System.currentTimeMillis();
         // 2. Duyet tung item de tru kho va tao OrderDetail
         for (Map.Entry<String, Integer> entry : getCart().entrySet()) {
             String itemId = entry.getKey();
@@ -380,6 +372,12 @@ public class CustomerController extends BaseController {
         for (OrderDetail d : details) {
             detailRepo.add(d);
         }
+        
+        // Ghi transaction log
+        long processingTimeMs = System.currentTimeMillis() - startTime;
+        String txId = generateNextId("TX", txRepo.getAll());
+        OrderTransaction tx = new OrderTransaction(txId, orderId, LockMechanism.OPTIMISTIC_LOCK, 0, processingTimeMs, true);
+        txRepo.add(tx);
         
         // 4. Clear cart
         getCart().clear();
@@ -513,22 +511,12 @@ public class CustomerController extends BaseController {
         Customer c = (Customer) authState.getCurrentUser();
 
         // Tao Order cha
-        int maxNum = 0;
-        for (Order o : orderRepo.getAll()) {
-            String id = o.getId();
-            if (id != null) {
-                String numStr = id.replaceAll("[^0-9]", "");
-                if (!numStr.isEmpty()) {
-                    try { int num = Integer.parseInt(numStr); if (num > maxNum) maxNum = num; }
-                    catch (NumberFormatException ignored) {}
-                }
-            }
-        }
-        String orderId = String.format("O%05d", maxNum + 1);
+        String orderId = generateNextId("ORD", orderRepo.getAll());
         Order order = new Order(orderId, c.getId(), LocalDateTime.now(), OrderStatus.PENDING);
 
         List<OrderDetail> details = new ArrayList<>();
 
+        long startTime = System.currentTimeMillis();
         // Duyet tung item duoc chon
         for (String itemId : selectedItemIds) {
             int qty = cart.get(itemId);
@@ -557,6 +545,12 @@ public class CustomerController extends BaseController {
         orderRepo.add(order);
         for (OrderDetail d : details) detailRepo.add(d);
 
+        // Ghi transaction log
+        long processingTimeMs = System.currentTimeMillis() - startTime;
+        String txId = generateNextId("TX", txRepo.getAll());
+        OrderTransaction tx = new OrderTransaction(txId, orderId, LockMechanism.OPTIMISTIC_LOCK, 0, processingTimeMs, true);
+        txRepo.add(tx);
+
         // Xoa cac item da thanh toan khoi gio, giu lai phan con lai
         for (String itemId : selectedItemIds) cart.remove(itemId);
         saveCartsToFile();
@@ -579,21 +573,11 @@ public class CustomerController extends BaseController {
         Customer c = (Customer) authState.getCurrentUser();
 
         // Tao Order ID tu dong
-        int maxNum = 0;
-        for (Order o : orderRepo.getAll()) {
-            String id = o.getId();
-            if (id != null) {
-                String numStr = id.replaceAll("[^0-9]", "");
-                if (!numStr.isEmpty()) {
-                    try { int num = Integer.parseInt(numStr); if (num > maxNum) maxNum = num; }
-                    catch (NumberFormatException ignored) {}
-                }
-            }
-        }
-        String orderId = String.format("O%05d", maxNum + 1);
+        String orderId = generateNextId("ORD", orderRepo.getAll());
         Order order = new Order(orderId, c.getId(), LocalDateTime.now(), OrderStatus.PENDING);
 
         OrderDetail detail;
+        long startTime = System.currentTimeMillis();
         Product p = productRepo.getById(itemId);
         if (p != null) {
             if (qty > p.getStock()) {
@@ -622,6 +606,12 @@ public class CustomerController extends BaseController {
 
         orderRepo.add(order);
         detailRepo.add(detail);
+
+        // Ghi transaction log
+        long processingTimeMs = System.currentTimeMillis() - startTime;
+        String txId = generateNextId("TX", txRepo.getAll());
+        OrderTransaction tx = new OrderTransaction(txId, orderId, LockMechanism.OPTIMISTIC_LOCK, 0, processingTimeMs, true);
+        txRepo.add(tx);
 
         return success("Mua truc tiep thanh cong! Ma don hang: " + orderId, null);
     }

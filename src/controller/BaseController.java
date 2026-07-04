@@ -111,4 +111,26 @@ public abstract class BaseController {
     protected ControllerResult error(String message) {
         return ControllerResult.error(message);
     }
+
+    /**
+     * Sinh ma ID tu dong tang de tranh trung lap.
+     * Vi du: generateNextId("ORD", orderRepo.getAll()) → "ORD00006"
+     *
+     * @param prefix Tien to (ORD, OD, TX)
+     * @param existingEntities Danh sach cac entity hien co
+     * @return Ma ID moi
+     */
+    protected String generateNextId(String prefix, java.util.List<? extends model.BaseEntity> existingEntities) {
+        int maxNum = 0;
+        for (model.BaseEntity e : existingEntities) {
+            String id = e.getId();
+            if (id != null && id.startsWith(prefix)) {
+                try {
+                    int num = Integer.parseInt(id.substring(prefix.length()));
+                    if (num > maxNum) maxNum = num;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return String.format(prefix + "%05d", maxNum + 1);
+    }
 }

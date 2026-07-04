@@ -177,7 +177,7 @@ public class OrderController extends BaseController {
         // --- XU LY KET QUA ---
         if (!stockDeducted) {
             // Tru kho THAT BAI → Ghi nhat ky that bai
-            String txId = generateId("TX", txRepo.count());
+            String txId = generateNextId("TX", txRepo.getAll());
             OrderTransaction failTx = new OrderTransaction(
                 txId, "", mechanism, 0, processingTime, false
             );
@@ -188,19 +188,19 @@ public class OrderController extends BaseController {
         }
 
         // --- TAO DON HANG ---
-        String orderId = generateId("ORD", orderRepo.count());
+        String orderId = generateNextId("ORD", orderRepo.getAll());
         Order order = new Order(orderId, customerId, LocalDateTime.now(), OrderStatus.PENDING);
         orderRepo.add(order);
 
         // --- TAO CHI TIET DON HANG ---
-        String detailId = generateId("OD", detailRepo.count());
+        String detailId = generateNextId("OD", detailRepo.getAll());
         OrderDetail detail = new OrderDetail(
             detailId, orderId, productId, quantity, product.getPrice()
         );
         detailRepo.add(detail);
 
         // --- GHI NHAT KY GIAO DICH ---
-        String txId = generateId("TX", txRepo.count());
+        String txId = generateNextId("TX", txRepo.getAll());
         OrderTransaction successTx = new OrderTransaction(
             txId, orderId, mechanism, 0, processingTime, true
         );
@@ -269,7 +269,7 @@ public class OrderController extends BaseController {
         // --- XU LY KET QUA ---
         if (!stockDeducted) {
             // Tru kho THAT BAI → Ghi nhat ky that bai
-            String txId = generateId("TX", txRepo.count());
+            String txId = generateNextId("TX", txRepo.getAll());
             OrderTransaction failTx = new OrderTransaction(
                 txId, "", mechanism, 0, processingTime, false
             );
@@ -280,19 +280,19 @@ public class OrderController extends BaseController {
         }
 
         // --- TAO DON HANG ---
-        String orderId = generateId("ORD", orderRepo.count());
+        String orderId = generateNextId("ORD", orderRepo.getAll());
         Order order = new Order(orderId, customerId, LocalDateTime.now(), OrderStatus.PENDING);
         orderRepo.add(order);
 
         // --- TAO CHI TIET DON HANG ---
-        String detailId = generateId("OD", detailRepo.count());
+        String detailId = generateNextId("OD", detailRepo.getAll());
         OrderDetail detail = new OrderDetail(
             detailId, orderId, flashSaleItemId, quantity, item.getSalePrice()
         );
         detailRepo.add(detail);
 
         // --- GHI NHAT KY GIAO DICH ---
-        String txId = generateId("TX", txRepo.count());
+        String txId = generateNextId("TX", txRepo.getAll());
         OrderTransaction successTx = new OrderTransaction(
             txId, orderId, mechanism, 0, processingTime, true
         );
@@ -307,18 +307,6 @@ public class OrderController extends BaseController {
     // =====================================================================
     // TIEN ICH
     // =====================================================================
-
-    /**
-     * Sinh ma ID tu dong tang.
-     * Vi du: generateId("ORD", 5) → "ORD00006"
-     *
-     * @param prefix Tien to (ORD, OD, TX)
-     * @param currentCount So luong ban ghi hien tai
-     * @return Ma ID moi
-     */
-    private String generateId(String prefix, int currentCount) {
-        return String.format("%s%05d", prefix, currentCount + 1);
-    }
 
     public ControllerResult getOrdersByCustomerId(String customerId) {
         List<Order> orders = orderRepo.findByCustomerId(customerId);
