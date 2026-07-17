@@ -141,3 +141,65 @@ del "%PROJECT_DIR%sources.txt"
 echo Dang khoi chay ung dung...
 java -Dfile.encoding=UTF-8 -cp "%PROJECT_DIR%target\classes" view.MainView
 pause
+
+===== HE THONG FLASH SALE =====
+1. Nguoi mua
+2. Nguoi ban
+3. Admin
+0. Thoat
+Chon role: 3
+Admin email: admin@gmail.com
+Admin password: 
+
+Sai tai khoan Admin.
+
+===== HE THONG FLASH SALE =====
+1. Nguoi mua
+2. Nguoi ban
+3. Admin
+0. Thoat
+Chon role: 3              
+Admin email: admin@gmail.com
+Admin password: 
+
+
+===== QUAN TRI VIEN =====
+1. Xem Flash Sale cho phe duyet
+2. Phe duyet Flash Sale
+3. Tu choi Flash Sale
+4. Xem tat ca Flash Sale
+5. Bat dau Flash Sale da duyet
+6. Ket thuc Flash Sale
+7. Chay Simulator 4 co che lock
+0. Dang xuat Admin
+Chon: 7
+Nhap flashItemId can simulate: PRD-00007
+So customer co the dung de test: 2011
+Nhap so thread (1-2011, moi thread = 1 customer): 1000
+Nhap so luong moi thread mua: 30
+Thao tac that bai: Khong tim thay flashItemId: PRD-00007
+
+===== QUAN TRI VIEN =====
+1. Xem Flash Sale cho phe duyet
+2. Phe duyet Flash Sale
+3. Tu choi Flash Sale
+4. Xem tat ca Flash Sale
+5. Bat dau Flash Sale da duyet
+6. Ket thuc Flash Sale
+7. Chay Simulator 4 co che lock
+0. Dang xuat Admin
+Chon: 7
+Nhap flashItemId can simulate: FSI-00006
+So customer co the dung de test: 2011
+Nhap so thread (1-2011, moi thread = 1 customer): 1000
+Nhap so luong moi thread mua: 100
+
+=== SIMULATOR RESULT ===
+Mechanism       Threads       OK     Fail       Sold LostUpdate   Oversold       TPS  vs Baseline   Violation%   Muc tieu
+NO_LOCK            1000        0     1000    0/22             0          0      0.00     Baseline        0.00%       PASS
+FILE_LOCK          1000        0     1000    0/22             0          0      0.00      -100.0%        0.00%       FAIL
+SYNCHRONIZED       1000        0     1000    0/22             0          0      0.00      -100.0%        0.00%       FAIL
+OPTIMISTIC         1000        0     1000    0/22             0          0      0.00      -100.0%        0.00%       FAIL
+Da ghi log vao data/transactions.csv
+Moi transaction co customerId de truy vet khach hang.
+Da ghi tong hop vao data/simulation_results.csv
