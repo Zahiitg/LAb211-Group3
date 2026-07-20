@@ -213,6 +213,27 @@ public class OrderController extends BaseController {
     }
 
     // =====================================================================
+    // PUBLIC WRAPPER CHO SIMULATOR (T8)
+    // =====================================================================
+
+    /**
+     * Dat hang voi bat ky co che Lock nao (dung cho SimulatorController).
+     * Day la wrapper cong khai cua ham placeOrderInternal().
+     *
+     * @param customerId      Ma khach hang
+     * @param flashSaleItemId Ma san pham Flash Sale
+     * @param quantity         So luong mua
+     * @param mechanism        Co che Lock can su dung
+     * @return ControllerResult
+     */
+    public ControllerResult placeOrderWithMechanism(String customerId,
+                                                     String flashSaleItemId,
+                                                     int quantity,
+                                                     LockMechanism mechanism) {
+        return placeOrderInternal(customerId, flashSaleItemId, quantity, mechanism);
+    }
+
+    // =====================================================================
     // LOGIC NOI BO - LUONG XU LY CHUNG
     // =====================================================================
 

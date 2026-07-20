@@ -42,6 +42,15 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
     private final boolean hasHeader;
 
     /**
+     * Che do Simulation: khi BAT (true), reload() va saveToFile() bi VO HIEU HOA.
+     * Tat ca thao tac CRUD chi chay tren RAM (cache), KHONG doc/ghi file CSV.
+     * Dieu nay ngan chan race condition khi nhieu threads dong thoi doc/ghi file.
+     *
+     * Su dung trong SimulatorController de stress test Lock mechanisms.
+     */
+    private volatile boolean simulationMode = false;
+
+    /**
      * Constructor - Doc toan bo file CSV len Cache.
      * 
      * @param filePath  Duong dan toi file CSV (vi du: "data/customers.csv")
@@ -191,6 +200,9 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
      * Dong header se duoc ghi lai (neu co).
      */
     protected void saveToFile() {
+        // Khi dang chay Simulation, KHONG ghi file de tranh race condition
+        if (simulationMode) return;
+
         File file = new File(filePath);
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
@@ -226,7 +238,29 @@ public abstract class CsvRepository<T extends BaseEntity> implements IRepository
      * Huu ich khi can dong bo lai voi file sau khi bi thay doi tu ben ngoai.
      */
     public void reload() {
+        // Khi dang chay Simulation, KHONG doc lai file de tranh race condition
+        if (simulationMode) return;
         loadFromFile();
+    }
+
+    /**
+     * Bat/Tat che do Simulation.
+     * Khi BAT: reload() va saveToFile() bi vo hieu hoa → moi thao tac chi tren RAM.
+     * Khi TAT: reload() tu dong duoc goi de dong bo lai cache voi file CSV.
+     *
+     * @param mode true = bat simulation mode, false = tat va reload lai
+     */
+    public void setSimulationMode(boolean mode) {
+        this.simulationMode = mode;
+        if (!mode) {
+            // Khi tat simulation mode, reload lai tu file de phuc hoi data goc
+            loadFromFile();
+        }
+    }
+
+    /** Kiem tra co dang o che do Simulation khong. */
+    public boolean isSimulationMode() {
+        return simulationMode;
     }
 
     /**

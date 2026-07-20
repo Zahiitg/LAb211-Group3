@@ -16,13 +16,12 @@ import java.util.List;
  * 1. getAllEvents() → Lay danh sach toan bo su kien Flash Sale
  *
  * Cac chuc nang se bo sung (theo phan cong TV3):
- * - listItems(eventId) → Lay san pham trong 1 su kien cu the
- * - startEvent(eventId) → Kich hoat su kien (ONGOING)
- * - endEvent(eventId) → Ket thuc su kien (ENDED)
+ * - listItems(eventId)   → Lay san pham trong 1 su kien cu the
+ * - startEvent(eventId)  → Kich hoat su kien (ONGOING)
+ * - endEvent(eventId)    → Ket thuc su kien (ENDED)
  *
  * @author Thanh vien 3 - Flash Sale Logic
- * @refactored-by Thanh vien 1 - Core Architecture (ap dung chuan
- *                BaseController)
+ * @refactored-by Thanh vien 1 - Core Architecture (ap dung chuan BaseController)
  */
 public class FlashSaleController extends BaseController {
 
@@ -46,7 +45,6 @@ public class FlashSaleController extends BaseController {
 
     /**
      * Constructor cho testing hoac duong dan tuy chinh.
-     * 
      * @param filePath Duong dan den file CSV flash events
      */
     public FlashSaleController(String filePath) {
@@ -105,41 +103,33 @@ public class FlashSaleController extends BaseController {
             if (ev.getId() != null && ev.getId().startsWith("E")) {
                 try {
                     int num = Integer.parseInt(ev.getId().substring(1));
-                    if (num > maxNum)
-                        maxNum = num;
-                } catch (NumberFormatException ignored) {
-                }
+                    if (num > maxNum) maxNum = num;
+                } catch (NumberFormatException ignored) {}
             }
         }
         String newId = String.format("E%05d", maxNum + 1);
-
-        java.time.LocalDateTime start = java.time.LocalDateTime.now()
-                .truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        
+        java.time.LocalDateTime start = java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         java.time.LocalDateTime end = start.plusDays(durationDays);
-
+        
         FlashSaleEvent newEvent = new FlashSaleEvent(newId, name.trim(), start, end, SaleStatus.UPCOMING);
         eventRepo.add(newEvent);
-
+        
         return success("Tao su kien Flash Sale thanh cong: " + name, newEvent);
     }
 
     /**
      * Nguoi ban dang ky san pham vao Flash Sale.
      */
-    public ControllerResult registerItem(String eventId, String productId, double salePrice, int limitedQty,
-            String sellerId) {
+    public ControllerResult registerItem(String eventId, String productId, double salePrice, int limitedQty, String sellerId) {
         FlashSaleEvent ev = eventRepo.getById(eventId);
-        if (ev == null)
-            return error("Khong tim thay su kien Flash Sale!");
-        if (ev.getStatus() != SaleStatus.ONGOING && ev.getStatus() != SaleStatus.UPCOMING)
-            return error("Su kien khong trong trang thai ONGOING hoac UPCOMING!");
+        if (ev == null) return error("Khong tim thay su kien Flash Sale!");
+        if (ev.getStatus() != SaleStatus.ONGOING && ev.getStatus() != SaleStatus.UPCOMING) return error("Su kien khong trong trang thai ONGOING hoac UPCOMING!");
 
         Product p = productRepo.getById(productId);
-        if (p == null)
-            return error("Khong tim thay san pham!");
-        if (!p.getSellerId().equals(sellerId))
-            return error("Ban chi duoc dang ky san pham cua chinh minh!");
-
+        if (p == null) return error("Khong tim thay san pham!");
+        if (!p.getSellerId().equals(sellerId)) return error("Ban chi duoc dang ky san pham cua chinh minh!");
+        
         if (salePrice <= 0 || salePrice >= p.getPrice()) {
             return error("Gia Sale phai lon hon 0 va NHO HON gia goc (" + p.getPrice() + ")!");
         }
@@ -152,10 +142,8 @@ public class FlashSaleController extends BaseController {
             if (fi.getId() != null && fi.getId().startsWith("FI")) {
                 try {
                     int num = Integer.parseInt(fi.getId().substring(2));
-                    if (num > maxNum)
-                        maxNum = num;
-                } catch (NumberFormatException ignored) {
-                }
+                    if (num > maxNum) maxNum = num;
+                } catch (NumberFormatException ignored) {}
             }
         }
         String newId = String.format("FI%05d", maxNum + 1);
@@ -184,7 +172,7 @@ public class FlashSaleController extends BaseController {
 
         List<FlashSaleItem> items = itemRepo.findItemsByEventId(normalizedId);
         return success("Tim thay " + items.size()
-                + " mat hang trong su kien " + normalizedId + ".", items);
+            + " mat hang trong su kien " + normalizedId + ".", items);
     }
 
     /**
@@ -201,7 +189,7 @@ public class FlashSaleController extends BaseController {
      * @return ControllerResult chua event da cap nhat
      */
     public ControllerResult startEvent(String eventId) {
-        return updateEventStatus(eventId, SaleStatus.ONGOING, "kich hoat 1234");
+        return updateEventStatus(eventId, SaleStatus.ONGOING, "kich hoat");
     }
 
     /**
@@ -227,13 +215,13 @@ public class FlashSaleController extends BaseController {
         }
         if (event.getStatus() == targetStatus) {
             return error("Su kien " + normalizedId + " da o trang thai "
-                    + targetStatus + ".");
+                + targetStatus + ".");
         }
 
         event.setStatus(targetStatus);
         eventRepo.update(event);
         return success("Da " + action + " su kien " + normalizedId
-                + " (" + targetStatus + ").", event);
+            + " (" + targetStatus + ").", event);
     }
 
     /**
@@ -245,7 +233,6 @@ public class FlashSaleController extends BaseController {
 
     /**
      * Lay FlashSaleEventRepository (dung cho Admin hoac Unit Test).
-     * 
      * @return FlashSaleEventRepository
      */
     public FlashSaleEventRepository getEventRepo() {

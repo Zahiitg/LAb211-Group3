@@ -52,10 +52,11 @@ public class AdminView {
             System.out.println("14. Quan ly san pham");
             System.out.println("15. Xem log giao dich");
             System.out.println("16. Cap nhat ho so");
+            System.out.println("17. Chay Simulator (Stress Test)");
             System.out.println("0. Dang xuat");
             System.out.println("----------------------------------------");
 
-            int choice = ConsoleUI.getInt("Chon chuc nang (0-16): ", 0, 16);
+            int choice = ConsoleUI.getInt("Chon chuc nang (0-17): ", 0, 17);
 
             switch (choice) {
                 case 1:
@@ -105,6 +106,9 @@ public class AdminView {
                     break;
                 case 16:
                     updateProfile();
+                    break;
+                case 17:
+                    runSimulator();
                     break;
                 case 0:
                     logout();
@@ -480,6 +484,11 @@ public class AdminView {
         String name = ConsoleUI.getString("Nhap ten moi: ");
         String password = ConsoleUI.getString("Nhap mat khau moi: ");
         handleResult(adminController.updateProfile(name, password));
+    }
+
+    private void runSimulator() {
+        SimulatorView simulatorView = new SimulatorView();
+        simulatorView.showSimulatorMenu();
     }
 
     private void logout() {

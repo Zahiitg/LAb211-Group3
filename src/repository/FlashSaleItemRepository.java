@@ -16,6 +16,11 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
         return new FlashSaleItem();
     }
 
+    @Override
+    protected String getHeader() {
+        return "id,productId,eventId,salePrice,limitedQty,soldQty,version";
+    }
+
     public List<FlashSaleItem> findItemsByEventId(String eventId) {
         // Thay thế List.of() bằng Collections.emptyList()
         if (eventId == null || eventId.trim().isEmpty()) return java.util.Collections.emptyList();
@@ -175,25 +180,32 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
                 return false; // Het hang that su, khong can retry
             }
 
-            // Buoc 3: Compare - Kiem tra version TRUOC khi sua
-            // Vi Java HashMap tra ve cung 1 Object reference,
-            // nen ta phai kiem tra TRUOC khi cap nhat, khong phai SAU.
-            if (item.getVersion() != oldVersion) {
-                // Ai do da chen ngang giua luc doc va luc kiem tra → Retry
+            // Buoc 3 & 4: Compare & Swap nguyen tu (Atomic)
+            // Trong thuc te, Database se dam bao viec nay. 
+            // Khi chay tren RAM, ta phai dung synchronized() CHI CHO DOAN NAY 
+            // de gia lap hanh vi Atomic cua cau lenh SQL: 
+            // UPDATE ... WHERE version = oldVersion
+            boolean success = false;
+            synchronized (item) {
+                if (item.getVersion() == oldVersion) {
+                    item.setSoldQty(oldSoldQty + quantity);
+                    item.setVersion(oldVersion + 1);
+                    success = true;
+                }
+            }
+
+            if (success) {
+                update(item);
+                return true;
+            } else {
+                // Ai do da chen ngang → Retry
                 try {
                     Thread.sleep(10 + (long)(Math.random() * 20));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return false;
                 }
-                continue;
             }
-
-            // Buoc 4: Swap - Cap nhat du lieu va luu ngay lap tuc (Atomic)
-            item.setSoldQty(oldSoldQty + quantity);
-            item.setVersion(oldVersion + 1);
-            update(item);
-            return true;
         }
 
         // Da retry het MAX_RETRY lan ma van bi xung dot → That bai
