@@ -318,7 +318,7 @@ public class SimulatorView {
 
     /**
      * Chay thi nghiem nghien cuu day du (Batch 100/250/500/1000 threads).
-     * Ket qua xuat ra file data/experiment_results.csv.
+     * Ket qua xuat ra file data/transactions.csv.
      */
     private void runResearchExperiment() {
         List<FlashSaleItem> items = simulatorController.getAvailableItems();
@@ -350,7 +350,7 @@ public class SimulatorView {
         System.out.println("  Iterations   : " + iterations);
         System.out.println("  Thread batches: 100, 250, 500, 1000");
         System.out.println("  Tong so lan chay: " + (4 * 4 * iterations) + " (4 batches x 4 mechanisms x " + iterations + " iters)");
-        System.out.println("  Output file  : data/experiment_results.csv");
+        System.out.println("  Output file  : data/transactions.csv");
         System.out.println("====================================");
 
         String confirm = ConsoleUI.getString("Day la quy trinh chay LAU. Xac nhan? (y/n): ");
@@ -366,7 +366,7 @@ public class SimulatorView {
                 System.out.println(ConsoleUI.CYAN + "  >> " + message + ConsoleUI.RESET));
 
         int[] threadCounts = {100, 250, 500, 1000};
-        String outputPath = "data/experiment_results.csv";
+        String outputPath = "data/transactions.csv";
 
         List<SimulatorController.ExperimentEntry> entries =
                 simulatorController.runResearchExperiment(
@@ -418,7 +418,7 @@ public class SimulatorView {
         }
 
         System.out.println();
-        ConsoleUI.printSuccess("Da luu ket qua vao file: data/experiment_results.csv");
+        ConsoleUI.printSuccess("Da luu ket qua vao file: data/transactions.csv");
         System.out.println(ConsoleUI.CYAN
                 + "  Ban co the dung file CSV nay de ve bieu do trong Excel/Google Sheets."
                 + ConsoleUI.RESET);

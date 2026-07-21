@@ -82,7 +82,7 @@ public class AuthenticationState {
         this.flashSaleEventRepo = new FlashSaleEventRepository("data/flash_events.csv");
         this.orderRepo = new OrderRepository("data/orders.csv");
         this.detailRepo = new OrderDetailRepository("data/order_details.csv");
-        this.txRepo = new OrderTransactionRepository("data/transactions.csv");
+        this.txRepo = new OrderTransactionRepository("data/order_transactions.csv");
         this.categoryRepo = new CategoryRepository("data/categories.csv");
     }
 
